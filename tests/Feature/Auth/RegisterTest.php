@@ -45,6 +45,9 @@ it('fails registration with missing name', function () {
     ]);
 
     $response->assertStatus(422)
+        ->assertJson([
+            'success' => false,
+        ])
         ->assertJsonValidationErrors(['name']);
 });
 
@@ -59,6 +62,9 @@ it('fails registration with duplicate email', function () {
     ]);
 
     $response->assertStatus(422)
+        ->assertJson([
+            'success' => false,
+        ])
         ->assertJsonValidationErrors(['email']);
 });
 
@@ -71,6 +77,9 @@ it('fails registration with password mismatch', function () {
     ]);
 
     $response->assertStatus(422)
+        ->assertJson([
+            'success' => false,
+        ])
         ->assertJsonValidationErrors(['password']);
 });
 
