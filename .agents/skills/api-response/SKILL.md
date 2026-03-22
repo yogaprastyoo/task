@@ -19,13 +19,25 @@ Use this skill when:
 
 ## Core Concept
 
-All API responses MUST follow a standard format:
+All API responses MUST follow these standard formats depending on the result:
 
-```json id="x4sh1g"
+### Success Response
+
+```json id="x4sh1g_success"
 {
-  "success": true|false,
+  "success": true,
   "message": string,
   "data": any
+}
+```
+
+### Error Response
+
+```json id="x4sh1g_error"
+{
+  "success": false,
+  "message": string,
+  "errors": any
 }
 ```
 
