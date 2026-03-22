@@ -20,6 +20,7 @@ it('can register a new user', function () {
         ])
         ->assertJsonStructure([
             'success',
+            'message',
             'data' => [
                 'id',
                 'name',
@@ -27,7 +28,6 @@ it('can register a new user', function () {
                 'created_at',
                 'updated_at',
             ],
-            'message',
         ]);
 
     $this->assertDatabaseHas('users', [

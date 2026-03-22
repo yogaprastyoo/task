@@ -13,8 +13,8 @@ class ApiResponse
     {
         return response()->json([
             'success' => true,
-            'data' => $data,
             'message' => $message,
+            'data' => $data,
         ], $status);
     }
 

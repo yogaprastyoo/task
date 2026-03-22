@@ -24,8 +24,8 @@ All API responses MUST follow a standard format:
 ```json id="x4sh1g"
 {
   "success": true|false,
-  "data": any,
-  "message": string
+  "message": string,
+  "data": any
 }
 ```
 
@@ -90,8 +90,8 @@ function successResponse($data = null, string $message = 'Success')
 {
     return response()->json([
         'success' => true,
-        'data' => $data,
-        'message' => $message
+        'message' => $message,
+        'data' => $data
     ]);
 }
 ```
@@ -111,8 +111,8 @@ class ApiResponse
     {
         return response()->json([
             'success' => true,
-            'data' => $data,
-            'message' => $message
+            'message' => $message,
+            'data' => $data
         ]);
     }
 }
