@@ -82,23 +82,13 @@ gh issue create --title "..." --body-file issue.md
 Branch name format:
 
 ```bash id="a7d4fr"
-{prefix}/{issue-number}-{slug}
+feature/{issue-number}-{slug}
 ```
 
-Prefix options:
-- `feature/` - for new features or implementations
-- `bugfix/` - for resolving bugs or issues
+Example:
 
-Example (Feature):
-
-```bash id="a8u3sd_feat"
+```bash id="a8u3sd"
 feature/12-create-workspace-api
-```
-
-Example (Bugfix):
-
-```bash id="a8u3sd_bug"
-bugfix/3-fix-case-insensitive-email
 ```
 
 ---
@@ -106,7 +96,7 @@ bugfix/3-fix-case-insensitive-email
 ### Step 4: Checkout Branch
 
 ```bash id="xv0w7g"
-git checkout -b {prefix}/{issue-number}-{slug}
+git checkout -b feature/{issue-number}-{slug}
 ```
 
 ---
