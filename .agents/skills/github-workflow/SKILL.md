@@ -79,8 +79,6 @@ gh issue create --title "..." --body-file issue.md
 
 ---
 
-### Step 3: Create Branch
-
 Branch name format:
 
 ```bash id="a7d4fr"

@@ -68,6 +68,23 @@ it('fails registration with duplicate email', function () {
         ->assertJsonValidationErrors(['email']);
 });
 
+it('fails registration with case-insensitive duplicate email', function () {
+    User::factory()->create(['email' => 'john@example.com']);
+
+    $response = $this->postJson('/api/auth/register', [
+        'name' => 'John Doe',
+        'email' => 'JOHN@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJson([
+            'success' => false,
+        ])
+        ->assertJsonValidationErrors(['email']);
+});
+
 it('fails registration with password mismatch', function () {
     $response = $this->postJson('/api/auth/register', [
         'name' => 'John Doe',
