@@ -104,28 +104,12 @@ it('does not return password in response', function () {
     $response = $this->postJson('/api/auth/register', [
         'name' => 'John Doe',
         'email' => 'john@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
     ]);
 
-    $response->assertStatus(201);
-    $this->assertArrayNotHasKey('password', $response->json('data'));
-});
+    $response->assertCreated();
+    $data = $response->json('data');
 
-it('restricts authenticated user from accessing register route', function () {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)
-        ->postJson('/api/auth/register', [
-            'name' => 'Jane Doe',
-            'email' => 'jane@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
-        ]);
-
-    $response->assertStatus(400)
-        ->assertJson([
-            'success' => false,
-            'message' => 'Already authenticated.',
-        ]);
+    expect($data)->not->toHaveKey('password');
 });

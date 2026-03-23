@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
@@ -15,20 +14,6 @@ class AuthService
     public function __construct(
         protected UserRepository $userRepository
     ) {}
-
-    /**
-     * Authenticate user credentials.
-     *
-     * @throws ValidationException
-     */
-    public function login(array $data): void
-    {
-        if (! Auth::attempt($data)) {
-            throw ValidationException::withMessages([
-                'email' => [__('auth.failed')],
-            ]);
-        }
-    }
 
     /**
      * Register a new user and log them in.
