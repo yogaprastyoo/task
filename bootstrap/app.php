@@ -31,4 +31,26 @@ return Application::configure(basePath: dirname(__DIR__))
                 );
             }
         });
+
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if ($request->is('api/*')) {
+                if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException || $e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
+                    return ApiResponse::error('Resource not found.', 404);
+                }
+
+                $statusCode = 500;
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                    $statusCode = $e->getStatusCode();
+                } elseif ($e->getCode() >= 400 && $e->getCode() <= 599) {
+                    $statusCode = $e->getCode();
+                }
+
+                return ApiResponse::error(
+                    $e->getMessage(),
+                    $statusCode
+                );
+            }
+        });
+
+
     })->create();
