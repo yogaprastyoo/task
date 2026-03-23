@@ -140,3 +140,109 @@ test('it returns custom not found message when workspace is not found', function
         ]);
 });
 
+test('can create a level 2 workspace', function () {
+    $root = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Child Workspace',
+            'parent_id' => $root->id,
+        ]);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.depth', 2)
+        ->assertJsonPath('data.parent_id', $root->id);
+});
+
+test('can create a level 3 workspace', function () {
+    $root = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+    $level2 = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $root->id,
+        'depth' => 2,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Grandchild Workspace',
+            'parent_id' => $level2->id,
+        ]);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.depth', 3)
+        ->assertJsonPath('data.parent_id', $level2->id);
+});
+
+test('cannot create a level 4 workspace due to depth limit', function () {
+    $root = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+    $level2 = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $root->id,
+        'depth' => 2,
+    ]);
+    $level3 = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $level2->id,
+        'depth' => 3,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Too Deep',
+            'parent_id' => $level3->id,
+        ]);
+
+    $response->assertStatus(422)
+        ->assertJsonPath('message', 'Maximum workspace depth of 3 reached.');
+});
+
+test('cannot create a child under a parent owned by another user', function () {
+    $othersWorkspace = Workspace::factory()->create(['owner_id' => $this->otherUser->id]);
+
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Attempted Theft',
+            'parent_id' => $othersWorkspace->id,
+        ]);
+
+    $response->assertStatus(403)
+        ->assertJsonPath('message', 'Parent workspace does not belong to you.');
+});
+
+test('cannot create a duplicate name under the same parent', function () {
+    $root = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    Workspace::factory()->create([
+        'name' => 'Sibling',
+        'owner_id' => $this->user->id,
+        'parent_id' => $root->id,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Sibling',
+            'parent_id' => $root->id,
+        ]);
+
+    $response->assertStatus(422)
+        ->assertJsonPath('success', false);
+});
+
+test('allows same name under different parents', function () {
+    $root1 = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $root2 = Workspace::factory()->create(['owner_id' => $this->user->id]);
+
+    Workspace::factory()->create([
+        'name' => 'Non-Sibling',
+        'owner_id' => $this->user->id,
+        'parent_id' => $root1->id,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Non-Sibling',
+            'parent_id' => $root2->id,
+        ]);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('success', true);
+});
