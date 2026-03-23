@@ -72,3 +72,20 @@ it('fails login validation for missing fields', function () {
         ])
         ->assertJsonValidationErrors(['email', 'password']);
 });
+
+it('restricts authenticated user from accessing login route', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)
+        ->withHeader('Referer', 'http://localhost')
+        ->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+    $response->assertStatus(400)
+        ->assertJson([
+            'success' => false,
+            'message' => 'Already authenticated.',
+        ]);
+});
