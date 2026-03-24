@@ -23,16 +23,31 @@ class WorkspaceService
     }
 
     /**
-     * Create a new root-level workspace.
+     * Create a new workspace (Root or Child).
      */
     public function createWorkspace(array $data): Workspace
     {
         $ownerId = Auth::id();
-        $parentId = null; // Enforced root-level for Level 1 (Issue #22)
+        $parentId = $data['parent_id'] ?? null;
         $depth = 1;
 
+        if ($parentId) {
+            $parent = $this->repository->findOrFail($parentId);
+
+            if ($parent->owner_id !== $ownerId) {
+                throw new Exception('Parent workspace does not belong to you.', 403);
+            }
+
+            $depth = $parent->depth + 1;
+        }
+
+        if ($depth > 3) {
+            throw new Exception('Maximum workspace depth of 3 reached.', 422);
+        }
+
         if ($this->repository->findByNameAndParent($ownerId, $parentId, $data['name'])) {
-            throw new Exception('A workspace with this name already exists at the root level.', 422);
+            $levelMessage = $parentId ? 'at this parent level' : 'at the root level';
+            throw new Exception("A workspace with this name already exists {$levelMessage}.", 422);
         }
 
         return $this->repository->create([
@@ -56,7 +71,8 @@ class WorkspaceService
 
         if ($name !== $workspace->name) {
             if ($this->repository->findByNameAndParent(Auth::id(), $workspace->parent_id, $name)) {
-                throw new Exception('A workspace with this name already exists at this level.', 422);
+                $levelMessage = $workspace->parent_id ? 'at this parent level' : 'at the root level';
+                throw new Exception("A workspace with this name already exists {$levelMessage}.", 422);
             }
         }
 
