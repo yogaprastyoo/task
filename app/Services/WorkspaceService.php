@@ -22,6 +22,14 @@ class WorkspaceService
     }
 
     /**
+     * Get root workspaces for the authenticated user.
+     */
+    public function getRootWorkspaces(int $userId): Collection
+    {
+        return $this->repository->getRootByOwner($userId);
+    }
+
+    /**
      * Find a specific workspace with ownership validation.
      */
     public function findWorkspace(int $userId, int $id): Workspace

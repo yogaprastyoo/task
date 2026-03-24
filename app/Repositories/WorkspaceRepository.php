@@ -50,6 +50,16 @@ class WorkspaceRepository
     }
 
     /**
+     * Get root workspaces owned by a user.
+     */
+    public function getRootByOwner(int $ownerId): Collection
+    {
+        return Workspace::where('owner_id', $ownerId)
+            ->whereNull('parent_id')
+            ->get();
+    }
+
+    /**
      * Find a workspace by owner, parent, and name (for uniqueness check).
      */
     public function findByNameAndParent(int $ownerId, ?int $parentId, string $name): ?Workspace

@@ -501,3 +501,20 @@ test('retrieving a workspace includes its children', function () {
         ->assertJsonPath('data.children.0.id', $child->id);
 });
 
+test('can retrieve only root workspaces', function () {
+    $root = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => null,
+    ]);
+    Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $root->id,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->getJson('/api/workspaces/root');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $root->id);
+});

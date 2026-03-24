@@ -16,6 +16,8 @@ Route::middleware('auth:sanctum')->group(function () {
         return ApiResponse::success($request->user(), 'Authenticated user');
     });
 
+    Route::get('/workspaces/root', [WorkspaceController::class, 'root']);
     Route::apiResource('/workspaces', WorkspaceController::class);
     Route::patch('/workspaces/{id}/move', [WorkspaceController::class, 'move']);
+
 });
