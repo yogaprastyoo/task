@@ -78,15 +78,16 @@ class WorkspaceService
             ]);
         }
 
-        $settings = null;
-        if (isset($data['icon']) || isset($data['color'])) {
-            $settings = [
-                'icon' => $data['icon'] ?? null,
-                'color' => $data['color'] ?? null,
-            ];
+        $settings = Workspace::DEFAULT_SETTINGS;
+        if (isset($data['icon'])) {
+            $settings['icon'] = $data['icon'];
+        }
+        if (isset($data['color'])) {
+            $settings['color'] = $data['color'];
         }
 
         return $this->repository->create([
+
             'name' => $data['name'],
             'owner_id' => $userId,
             'parent_id' => $parentId,

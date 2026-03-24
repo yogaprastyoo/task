@@ -888,3 +888,14 @@ describe('Workspace Archiving and Settings (#41)', function () {
             ->assertStatus(403);
     });
 });
+
+it('applies default settings when none are provided', function () {
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Default Settings WS',
+        ]);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.settings.icon', Workspace::DEFAULT_SETTINGS['icon'])
+        ->assertJsonPath('data.settings.color', Workspace::DEFAULT_SETTINGS['color']);
+});

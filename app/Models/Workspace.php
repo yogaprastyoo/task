@@ -14,7 +14,13 @@ class Workspace extends Model
     /** @use HasFactory<WorkspaceFactory> */
     use HasFactory, SoftDeletes;
 
+    public const DEFAULT_SETTINGS = [
+        'icon' => 'folder_open',
+        'color' => '#A0AEC0', // Neutral Gray/Silver
+    ];
+
     protected $fillable = [
+
         'name',
         'owner_id',
         'parent_id',
