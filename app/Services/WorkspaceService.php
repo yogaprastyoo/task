@@ -117,7 +117,7 @@ class WorkspaceService
         $workspace = $this->repository->findOrFail($id);
 
         if ($workspace->owner_id !== $userId) {
-            throw new Exception('Unauthorized to delete this workspace.', 403);
+            abort(403, 'Unauthorized to delete this workspace.');
         }
 
         $this->performRecursiveDelete($workspace);
@@ -196,5 +196,38 @@ class WorkspaceService
         $this->repository->updateSubtreeDepths($workspace, $newDepth);
 
         return $workspace;
+    }
+
+    /**
+     * Restore a soft-deleted workspace and all its descendants.
+     */
+    public function restoreWorkspace(int $userId, int $id): Workspace
+    {
+        $workspace = $this->repository->findWithTrashed($id);
+
+        if ($workspace->owner_id !== $userId) {
+            abort(403, 'Unauthorized to restore this workspace.');
+        }
+
+        $this->performRecursiveRestore($workspace);
+
+        return $workspace->refresh();
+    }
+
+    /**
+     * Helper to recursively restore descendants.
+     */
+    protected function performRecursiveRestore(Workspace $workspace): void
+    {
+        // Load trashed children to avoid N+1 queries
+        $workspace->load(['children' => function ($query) {
+            $query->withTrashed();
+        }]);
+
+        foreach ($workspace->children as $child) {
+            $this->performRecursiveRestore($child);
+        }
+
+        $this->repository->restore($workspace);
     }
 }

@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Requests\MoveWorkspaceRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
+use App\Models\Workspace;
 use App\Services\WorkspaceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -79,10 +80,24 @@ class WorkspaceController extends Controller
     /**
      * Move the specified workspace to a new parent.
      */
-    public function move(int $id, MoveWorkspaceRequest $request): JsonResponse
+    public function move(MoveWorkspaceRequest $request, int $id): JsonResponse
     {
-        $workspace = $this->service->moveWorkspace(Auth::id(), $id, $request->parent_id);
+        $workspace = $this->service->moveWorkspace(
+            Auth::id(),
+            $id,
+            $request->validated('parent_id')
+        );
 
         return ApiResponse::success($workspace, 'Workspace moved successfully');
+    }
+
+    /**
+     * Restore a soft-deleted workspace.
+     */
+    public function restore(Workspace $workspace): JsonResponse
+    {
+        $workspace = $this->service->restoreWorkspace(Auth::id(), $workspace->id);
+
+        return ApiResponse::success($workspace, 'Workspace restored successfully');
     }
 }
