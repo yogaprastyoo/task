@@ -858,15 +858,27 @@ describe('Workspace Archiving and Settings (#41)', function () {
             ->assertJsonCount(2, 'data');
     });
 
-    it('can retrieve only archived workspaces via dedicated endpoint', function () {
+    it('can retrieve only top-level archived workspaces via dedicated endpoint', function () {
         Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'Active', 'is_archived' => false]);
-        Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'Archived', 'is_archived' => true]);
+
+        // This is a top-level archived workspace
+        $archivedParent = Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'Archived Parent', 'is_archived' => true]);
+        // This is casually archived because of its parent, shouldn't appear in flat list
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $archivedParent->id, 'name' => 'Archived Child', 'is_archived' => true]);
+
+        // This is archived, but its parent is NOT archived (manual archive of child)
+        $activeParent = Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'Active Parent', 'is_archived' => false]);
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $activeParent->id, 'name' => 'Individually Archived Child', 'is_archived' => true]);
 
         $response = $this->actingAs($this->user)->getJson('/api/workspaces/archived');
 
         $response->assertStatus(200)
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.name', 'Archived');
+            ->assertJsonCount(2, 'data'); // Should only be the Parent and the Individually Archived Child
+
+        $names = collect($response->json('data'))->pluck('name');
+        expect($names)->toContain('Archived Parent')
+            ->toContain('Individually Archived Child')
+            ->not->toContain('Archived Child');
     });
 
     it('validates color hex format', function () {

@@ -180,6 +180,9 @@ class WorkspaceRepository
     {
         return Workspace::where('owner_id', $ownerId)
             ->where('is_archived', true)
+            ->whereDoesntHave('parent', function ($query) {
+                $query->where('is_archived', true);
+            })
             ->get();
     }
 }

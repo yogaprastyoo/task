@@ -32,8 +32,7 @@ class WorkspaceController extends Controller
      */
     public function archived(): JsonResponse
     {
-        $workspaces = $this->service->getWorkspaces(Auth::id(), true);
-        $archived = $workspaces->filter(fn ($w) => $w->is_archived)->values();
+        $archived = $this->service->getArchivedWorkspaces(Auth::id());
 
         return ApiResponse::success($archived, 'Archived workspaces retrieved successfully');
     }

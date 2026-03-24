@@ -31,6 +31,14 @@ class WorkspaceService
     }
 
     /**
+     * Get isolated/top-level archived workspaces for the authenticated user.
+     */
+    public function getArchivedWorkspaces(int $userId): Collection
+    {
+        return $this->repository->getArchivedByOwner($userId);
+    }
+
+    /**
      * Find a specific workspace with ownership validation.
      */
     public function findWorkspace(int $userId, int $id): Workspace
