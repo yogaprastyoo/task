@@ -6,6 +6,7 @@ use App\Models\Workspace;
 use App\Repositories\WorkspaceRepository;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\ValidationException;
 
 class WorkspaceService
 {
@@ -65,12 +66,16 @@ class WorkspaceService
         }
 
         if ($depth > 3) {
-            throw new Exception('Maximum workspace depth of 3 reached.', 422);
+            throw ValidationException::withMessages([
+                'parent_id' => ['Maximum workspace depth of 3 reached.'],
+            ]);
         }
 
         if ($this->repository->findByNameAndParent($userId, $parentId, $data['name'])) {
             $levelMessage = $parentId ? 'at this parent level' : 'at the root level';
-            throw new Exception("A workspace with this name already exists {$levelMessage}.", 422);
+            throw ValidationException::withMessages([
+                'name' => ["A workspace with this name already exists {$levelMessage}."],
+            ]);
         }
 
         return $this->repository->create([
@@ -95,7 +100,9 @@ class WorkspaceService
         if ($name !== $workspace->name) {
             if ($this->repository->findByNameAndParent($userId, $workspace->parent_id, $name)) {
                 $levelMessage = $workspace->parent_id ? 'at this parent level' : 'at the root level';
-                throw new Exception("A workspace with this name already exists {$levelMessage}.", 422);
+                throw ValidationException::withMessages([
+                    'name' => ["A workspace with this name already exists {$levelMessage}."],
+                ]);
             }
         }
 
@@ -146,7 +153,9 @@ class WorkspaceService
 
         if ($parentId) {
             if ($parentId === $id) {
-                throw new Exception('Cannot move a workspace to itself.', 422);
+                throw ValidationException::withMessages([
+                    'parent_id' => ['Cannot move a workspace to itself.'],
+                ]);
             }
 
             $parent = $this->repository->findOrFail($parentId);
@@ -156,7 +165,9 @@ class WorkspaceService
             }
 
             if ($this->repository->isDescendant($id, $parent)) {
-                throw new Exception('Circular dependency detected: Cannot move a workspace to its own descendant.', 422);
+                throw ValidationException::withMessages([
+                    'parent_id' => ['Circular dependency detected: Cannot move a workspace to its own descendant.'],
+                ]);
             }
 
             $newDepth = $parent->depth + 1;
@@ -167,14 +178,18 @@ class WorkspaceService
         if ($parentId !== $workspace->parent_id) {
             if ($this->repository->findByNameAndParent($userId, $parentId, $workspace->name)) {
                 $levelMessage = $parentId ? 'at this parent level' : 'at the root level';
-                throw new Exception("A workspace with this name already exists {$levelMessage}.", 422);
+                throw ValidationException::withMessages([
+                    'name' => ["A workspace with this name already exists {$levelMessage}."],
+                ]);
             }
         }
 
         $subtreeHeight = $this->repository->getSubtreeHeight($workspace);
 
         if (($newDepth + $subtreeHeight - 1) > 3) {
-            throw new Exception('Moving this workspace would exceed the maximum depth of 3.', 422);
+            throw ValidationException::withMessages([
+                'parent_id' => ['Moving this workspace would exceed the maximum depth of 3.'],
+            ]);
         }
 
         $workspace = $this->repository->update($workspace, ['parent_id' => $parentId]);
