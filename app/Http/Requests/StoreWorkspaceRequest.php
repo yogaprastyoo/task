@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreWorkspaceRequest extends FormRequest
 {
@@ -21,7 +22,8 @@ class StoreWorkspaceRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'parent_id' => ['nullable', 'integer', 'exists:workspaces,id'],
+            'parent_id' => ['nullable', 'integer', Rule::exists('workspaces', 'id')->whereNull('deleted_at')],
+
         ];
     }
 }

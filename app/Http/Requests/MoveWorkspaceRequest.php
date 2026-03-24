@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class MoveWorkspaceRequest extends FormRequest
 {
@@ -23,7 +24,8 @@ class MoveWorkspaceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'parent_id' => ['nullable', 'integer', 'exists:workspaces,id'],
+            'parent_id' => ['nullable', 'integer', Rule::exists('workspaces', 'id')->whereNull('deleted_at')],
+
         ];
     }
 }

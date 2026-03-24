@@ -645,3 +645,122 @@ test('cannot restore an active workspace', function () {
         ->assertJsonPath('success', false)
         ->assertJsonPath('message', 'Resource not found.');
 });
+
+// ============================================================
+// SOFT DELETE EDGE CASES
+// ============================================================
+
+test('soft-deleted workspace is hidden from the index list', function () {
+    Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $trashed = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $trashed->delete();
+
+    $response = $this->actingAs($this->user)->getJson('/api/workspaces');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data');
+});
+
+test('soft-deleted workspace is hidden from the root list', function () {
+    $trashed = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => null]);
+    Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => null]);
+    $trashed->delete();
+
+    $response = $this->actingAs($this->user)->getJson('/api/workspaces/root');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data');
+});
+
+test('cannot retrieve a soft-deleted workspace by id', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $workspace->delete();
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/api/workspaces/{$workspace->id}");
+
+    $response->assertStatus(404);
+});
+
+test('cannot update a soft-deleted workspace', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $workspace->delete();
+
+    $response = $this->actingAs($this->user)
+        ->putJson("/api/workspaces/{$workspace->id}", [
+            'name' => 'Updated Name',
+        ]);
+
+    $response->assertStatus(404);
+});
+
+test('cannot re-delete an already soft-deleted workspace', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $workspace->delete();
+
+    $response = $this->actingAs($this->user)
+        ->deleteJson("/api/workspaces/{$workspace->id}");
+
+    $response->assertStatus(404);
+});
+
+test('cannot move a soft-deleted workspace', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $newParent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $workspace->delete();
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => $newParent->id,
+        ]);
+
+    $response->assertStatus(404);
+});
+
+test('cannot create a child under a soft-deleted parent', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $parent->delete();
+
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Orphan Child',
+            'parent_id' => $parent->id,
+        ]);
+
+    $response->assertStatus(422);
+});
+
+test('cannot move a workspace to a soft-deleted parent', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $parent->delete();
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => $parent->id,
+        ]);
+
+    $response->assertStatus(422);
+});
+
+test('unauthorized user cannot restore another users trashed workspace', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->otherUser->id]);
+    $workspace->delete();
+
+    $response = $this->actingAs($this->user)
+        ->postJson("/api/workspaces/{$workspace->id}/restore");
+
+    $response->assertStatus(403);
+});
+
+test('children hidden from show response after being soft-deleted', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $child = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $parent->id]);
+    $child->delete();
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/api/workspaces/{$parent->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonCount(0, 'data.children');
+});
