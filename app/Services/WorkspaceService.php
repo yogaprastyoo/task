@@ -120,11 +120,13 @@ class WorkspaceService
             $updateData['name'] = $data['name'];
         }
 
-        if (isset($data['is_archived'])) {
+        if (isset($data['is_archived']) && $data['is_archived'] !== $workspace->is_archived) {
+            $this->performRecursiveArchive($workspace, $data['is_archived']);
             $updateData['is_archived'] = $data['is_archived'];
         }
 
         // Handle settings merging
+
         if (isset($data['icon']) || isset($data['color'])) {
             $settings = $workspace->settings ?? [];
             if (isset($data['icon'])) {
@@ -160,9 +162,28 @@ class WorkspaceService
             abort(403, 'Unauthorized to archive this workspace.');
         }
 
+        $newStatus = ! $workspace->is_archived;
+        $this->performRecursiveArchive($workspace, $newStatus);
+
         return $this->repository->update($workspace, [
-            'is_archived' => ! $workspace->is_archived,
+            'is_archived' => $newStatus,
         ]);
+    }
+
+    /**
+     * Helper to recursively archive or unarchive descendants.
+     */
+    protected function performRecursiveArchive(Workspace $workspace, bool $status): void
+    {
+        // Load children (including trashed) to ensure the whole subtree is consistent
+        $workspace->load(['children' => function ($query) {
+            $query->withTrashed();
+        }]);
+
+        foreach ($workspace->children as $child) {
+            $this->performRecursiveArchive($child, $status);
+            $this->repository->update($child, ['is_archived' => $status]);
+        }
     }
 
     /**

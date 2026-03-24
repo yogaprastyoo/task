@@ -899,3 +899,29 @@ it('applies default settings when none are provided', function () {
         ->assertJsonPath('data.settings.icon', null)
         ->assertJsonPath('data.settings.color', null);
 });
+
+it('archives descendants recursively', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $child = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $parent->id]);
+    $grandchild = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $child->id]);
+
+    $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$parent->id}/archive")
+        ->assertStatus(200);
+
+    expect($parent->refresh()->is_archived)->toBeTrue();
+    expect($child->refresh()->is_archived)->toBeTrue();
+    expect($grandchild->refresh()->is_archived)->toBeTrue();
+});
+
+it('unarchives descendants recursively', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id, 'is_archived' => true]);
+    $child = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $parent->id, 'is_archived' => true]);
+
+    $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$parent->id}/archive")
+        ->assertStatus(200);
+
+    expect($parent->refresh()->is_archived)->toBeFalse();
+    expect($child->refresh()->is_archived)->toBeFalse();
+});
