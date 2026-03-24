@@ -580,3 +580,50 @@ test('can retrieve a list of trashed workspaces', function () {
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.id', $trashWorkspace->id);
 });
+
+test('can create a workspace with a name of a soft-deleted workspace', function () {
+    $workspace = Workspace::factory()->create([
+        'name' => 'Soft Deleted Name',
+        'owner_id' => $this->user->id,
+        'parent_id' => null,
+    ]);
+
+    // Soft delete the workspace
+    $this->actingAs($this->user)->deleteJson("/api/workspaces/{$workspace->id}");
+
+    // Create a new one with the exact same name
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Soft Deleted Name',
+            'parent_id' => null,
+        ]);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('success', true);
+});
+
+test('cannot restore a workspace if an active workspace has the same name', function () {
+    $workspace = Workspace::factory()->create([
+        'name' => 'Conflict Name',
+        'owner_id' => $this->user->id,
+        'parent_id' => null,
+    ]);
+
+    // Soft delete it
+    $this->actingAs($this->user)->deleteJson("/api/workspaces/{$workspace->id}");
+
+    // Create an active one with the same name
+    Workspace::factory()->create([
+        'name' => 'Conflict Name',
+        'owner_id' => $this->user->id,
+        'parent_id' => null,
+    ]);
+
+    // Try to restore the soft-deleted one
+    $response = $this->actingAs($this->user)
+        ->postJson("/api/workspaces/{$workspace->id}/restore");
+
+    $response->assertStatus(422)
+        ->assertJsonPath('success', false)
+        ->assertJsonPath('message', 'Cannot restore workspace because an active workspace with this name already exists at the root level.');
+});
