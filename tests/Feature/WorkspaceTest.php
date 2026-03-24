@@ -896,6 +896,6 @@ it('applies default settings when none are provided', function () {
         ]);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.settings.icon', Workspace::DEFAULT_SETTINGS['icon'])
-        ->assertJsonPath('data.settings.color', Workspace::DEFAULT_SETTINGS['color']);
+        ->assertJsonPath('data.settings.icon', null)
+        ->assertJsonPath('data.settings.color', null);
 });
