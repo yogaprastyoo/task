@@ -133,4 +133,14 @@ class WorkspaceController extends Controller
 
         return ApiResponse::success($workspace, "Workspace {$status} successfully");
     }
+
+    /**
+     * Get breadcrumbs (ancestor path) for a specific workspace.
+     */
+    public function breadcrumbs(int $id): JsonResponse
+    {
+        $breadcrumbs = $this->service->getBreadcrumbs(Auth::id(), $id);
+
+        return ApiResponse::success($breadcrumbs, 'Breadcrumbs retrieved successfully');
+    }
 }

@@ -198,4 +198,25 @@ class WorkspaceRepository
     {
         Workspace::withTrashed()->whereIn('id', $ids)->update(['is_archived' => $status]);
     }
+
+    /**
+     * Get the ancestors of a workspace from root down to the workspace itself.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    public function getAncestors(Workspace $workspace): array
+    {
+        $ancestors = [];
+        $current = $workspace;
+
+        while ($current !== null) {
+            array_unshift($ancestors, [
+                'id' => $current->id,
+                'name' => $current->name,
+            ]);
+            $current = $current->parent_id ? $this->findOrFail($current->parent_id) : null;
+        }
+
+        return $ancestors;
+    }
 }
