@@ -764,3 +764,176 @@ test('children hidden from show response after being soft-deleted', function () 
     $response->assertStatus(200)
         ->assertJsonCount(0, 'data.children');
 });
+
+describe('Workspace Archiving and Settings (#41)', function () {
+    beforeEach(function () {
+        $this->user = User::factory()->create();
+    });
+
+    it('can create a workspace with visual settings', function () {
+        $response = $this->actingAs($this->user)
+            ->postJson('/api/workspaces', [
+                'name' => 'Design Workspace',
+                'icon' => 'palette',
+                'color' => '#FF5733',
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.name', 'Design Workspace')
+            ->assertJsonPath('data.settings.icon', 'palette')
+            ->assertJsonPath('data.settings.color', '#FF5733');
+
+        $this->assertDatabaseHas('workspaces', [
+            'name' => 'Design Workspace',
+            'owner_id' => $this->user->id,
+        ]);
+
+        $workspace = Workspace::where('name', 'Design Workspace')->first();
+        expect($workspace->settings)->toBe(['icon' => 'palette', 'color' => '#FF5733']);
+    });
+
+    it('can update workspace visual settings', function () {
+        $workspace = Workspace::factory()->create([
+            'owner_id' => $this->user->id,
+            'settings' => ['icon' => 'old-icon', 'color' => '#000000'],
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/workspaces/{$workspace->id}", [
+                'icon' => 'new-icon',
+                'color' => '#FFFFFF',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.settings.icon', 'new-icon')
+            ->assertJsonPath('data.settings.color', '#FFFFFF');
+    });
+
+    it('can toggle archive status', function () {
+        $workspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
+
+        // Archive
+        $this->actingAs($this->user)
+            ->patchJson("/api/workspaces/{$workspace->id}/archive")
+            ->assertStatus(200)
+            ->assertJsonPath('data.is_archived', true);
+
+        expect($workspace->refresh()->is_archived)->toBeTrue();
+
+        // Unarchive
+        $this->actingAs($this->user)
+            ->patchJson("/api/workspaces/{$workspace->id}/archive")
+            ->assertStatus(200)
+            ->assertJsonPath('data.is_archived', false);
+
+        expect($workspace->refresh()->is_archived)->toBeFalse();
+    });
+
+    it('excludes archived workspaces from default list', function () {
+        Workspace::factory()->create([
+            'owner_id' => $this->user->id,
+            'name' => 'Active WS',
+            'is_archived' => false,
+        ]);
+        Workspace::factory()->create([
+            'owner_id' => $this->user->id,
+            'name' => 'Archived WS',
+            'is_archived' => true,
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Active WS');
+    });
+
+    it('can include archived workspaces in list with query parameter', function () {
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'is_archived' => false]);
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'is_archived' => true]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces?include_archived=true');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2, 'data');
+    });
+
+    it('can retrieve only top-level archived workspaces via dedicated endpoint', function () {
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'Active', 'is_archived' => false]);
+
+        // This is a top-level archived workspace
+        $archivedParent = Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'Archived Parent', 'is_archived' => true]);
+        // This is casually archived because of its parent, shouldn't appear in flat list
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $archivedParent->id, 'name' => 'Archived Child', 'is_archived' => true]);
+
+        // This is archived, but its parent is NOT archived (manual archive of child)
+        $activeParent = Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'Active Parent', 'is_archived' => false]);
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $activeParent->id, 'name' => 'Individually Archived Child', 'is_archived' => true]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces/archived');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2, 'data'); // Should only be the Parent and the Individually Archived Child
+
+        $names = collect($response->json('data'))->pluck('name');
+        expect($names)->toContain('Archived Parent')
+            ->toContain('Individually Archived Child')
+            ->not->toContain('Archived Child');
+    });
+
+    it('validates color hex format', function () {
+        $this->actingAs($this->user)
+            ->postJson('/api/workspaces', [
+                'name' => 'Invalid Color',
+                'color' => 'not-a-color',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['color']);
+    });
+
+    it('prevents unauthorized archive toggle', function () {
+        $otherUser = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $otherUser->id]);
+
+        $this->actingAs($this->user)
+            ->patchJson("/api/workspaces/{$workspace->id}/archive")
+            ->assertStatus(403);
+    });
+});
+
+it('applies default settings when none are provided', function () {
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/workspaces', [
+            'name' => 'Default Settings WS',
+        ]);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.settings.icon', null)
+        ->assertJsonPath('data.settings.color', null);
+});
+
+it('archives descendants recursively', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $child = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $parent->id]);
+    $grandchild = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $child->id]);
+
+    $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$parent->id}/archive")
+        ->assertStatus(200);
+
+    expect($parent->refresh()->is_archived)->toBeTrue();
+    expect($child->refresh()->is_archived)->toBeTrue();
+    expect($grandchild->refresh()->is_archived)->toBeTrue();
+});
+
+it('unarchives descendants recursively', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id, 'is_archived' => true]);
+    $child = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $parent->id, 'is_archived' => true]);
+
+    $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$parent->id}/archive")
+        ->assertStatus(200);
+
+    expect($parent->refresh()->is_archived)->toBeFalse();
+    expect($child->refresh()->is_archived)->toBeFalse();
+});

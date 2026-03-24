@@ -12,6 +12,7 @@ use Tests\TestCase;
 class WorkspaceServiceTest extends TestCase
 {
     protected WorkspaceRepository $repository;
+
     protected WorkspaceService $service;
 
     protected function setUp(): void
@@ -24,7 +25,7 @@ class WorkspaceServiceTest extends TestCase
     public function test_it_calculates_depth_one_for_root_workspaces(): void
     {
         Auth::shouldReceive('id')->once()->andReturn(1);
-        
+
         $this->repository->expects($this->once())
             ->method('findByNameAndParent')
             ->with(1, null, 'Root')
@@ -35,7 +36,7 @@ class WorkspaceServiceTest extends TestCase
             ->with($this->callback(function ($data) {
                 return $data['depth'] === 1 && $data['parent_id'] === null;
             }))
-            ->willReturn(new Workspace());
+            ->willReturn(new Workspace);
 
         $this->service->createWorkspace(['name' => 'Root']);
     }
@@ -43,21 +44,21 @@ class WorkspaceServiceTest extends TestCase
     public function test_it_calculates_depth_two_for_child_of_root(): void
     {
         Auth::shouldReceive('id')->andReturn(1);
-        
-        $parent = new Workspace();
+
+        $parent = new Workspace;
         $parent->id = 10;
         $parent->owner_id = 1;
         $parent->depth = 1;
 
         $this->repository->method('findOrFail')->with(10)->willReturn($parent);
         $this->repository->method('findByNameAndParent')->willReturn(null);
-        
+
         $this->repository->expects($this->once())
             ->method('create')
             ->with($this->callback(function ($data) {
                 return $data['depth'] === 2 && $data['parent_id'] === 10;
             }))
-            ->willReturn(new Workspace());
+            ->willReturn(new Workspace);
 
         $this->service->createWorkspace(['name' => 'Level 2', 'parent_id' => 10]);
     }
@@ -65,8 +66,8 @@ class WorkspaceServiceTest extends TestCase
     public function test_it_throws_exception_when_depth_exceeds_three(): void
     {
         Auth::shouldReceive('id')->andReturn(1);
-        
-        $parent = new Workspace();
+
+        $parent = new Workspace;
         $parent->id = 20;
         $parent->owner_id = 1;
         $parent->depth = 3;
@@ -82,8 +83,8 @@ class WorkspaceServiceTest extends TestCase
     public function test_it_throws_exception_when_parent_belongs_to_another_user(): void
     {
         Auth::shouldReceive('id')->andReturn(1);
-        
-        $parent = new Workspace();
+
+        $parent = new Workspace;
         $parent->id = 30;
         $parent->owner_id = 2; // Different user
         $parent->depth = 1;

@@ -28,11 +28,22 @@ class WorkspaceController extends Controller
     }
 
     /**
+     * Display a listing of archived workspaces.
+     */
+    public function archived(): JsonResponse
+    {
+        $archived = $this->service->getArchivedWorkspaces(Auth::id());
+
+        return ApiResponse::success($archived, 'Archived workspaces retrieved successfully');
+    }
+
+    /**
      * Display a listing of the workspaces.
      */
     public function index(): JsonResponse
     {
-        $workspaces = $this->service->getWorkspaces(Auth::id());
+        $includeArchived = request()->boolean('include_archived');
+        $workspaces = $this->service->getWorkspaces(Auth::id(), $includeArchived);
 
         return ApiResponse::success($workspaces, 'Workspaces retrieved successfully');
     }
@@ -42,7 +53,8 @@ class WorkspaceController extends Controller
      */
     public function root(): JsonResponse
     {
-        $workspaces = $this->service->getRootWorkspaces(Auth::id());
+        $includeArchived = request()->boolean('include_archived');
+        $workspaces = $this->service->getRootWorkspaces(Auth::id(), $includeArchived);
 
         return ApiResponse::success($workspaces, 'Root workspaces retrieved successfully');
     }
@@ -62,9 +74,9 @@ class WorkspaceController extends Controller
      */
     public function update(int $id, UpdateWorkspaceRequest $request): JsonResponse
     {
-        $workspace = $this->service->renameWorkspace(Auth::id(), $id, $request->name);
+        $workspace = $this->service->updateWorkspace(Auth::id(), $id, $request->validated());
 
-        return ApiResponse::success($workspace, 'Workspace renamed successfully');
+        return ApiResponse::success($workspace, 'Workspace updated successfully');
     }
 
     /**
@@ -109,5 +121,16 @@ class WorkspaceController extends Controller
         $workspace = $this->service->restoreWorkspace(Auth::id(), $workspace->id);
 
         return ApiResponse::success($workspace, 'Workspace restored successfully');
+    }
+
+    /**
+     * Toggle archive status of a workspace.
+     */
+    public function archive(int $id): JsonResponse
+    {
+        $workspace = $this->service->archiveWorkspace(Auth::id(), $id);
+        $status = $workspace->is_archived ? 'archived' : 'unarchived';
+
+        return ApiResponse::success($workspace, "Workspace {$status} successfully");
     }
 }
