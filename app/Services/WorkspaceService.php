@@ -130,21 +130,19 @@ class WorkspaceService
                 throw new Exception('Parent workspace does not belong to you.', 403);
             }
 
-            // Check if sibling name conflict exists at the destination parent level
-            if ($this->repository->findByNameAndParent($userId, $parentId, $workspace->name)) {
-                $levelMessage = 'at this parent level';
-                throw new Exception("A workspace with this name already exists {$levelMessage}.", 422);
-            }
-
             if ($this->repository->isDescendant($id, $parent)) {
                 throw new Exception('Circular dependency detected: Cannot move a workspace to its own descendant.', 422);
             }
 
             $newDepth = $parent->depth + 1;
-        } else {
-            // Check if sibling name conflict exists at the root level
-            if ($this->repository->findByNameAndParent($userId, null, $workspace->name)) {
-                throw new Exception('A workspace with this name already exists at the root level.', 422);
+        }
+
+        // Check if sibling name conflict exists at the destination parent level
+        // Only check if we are actually changing the parent
+        if ($parentId !== $workspace->parent_id) {
+            if ($this->repository->findByNameAndParent($userId, $parentId, $workspace->name)) {
+                $levelMessage = $parentId ? 'at this parent level' : 'at the root level';
+                throw new Exception("A workspace with this name already exists {$levelMessage}.", 422);
             }
         }
 
