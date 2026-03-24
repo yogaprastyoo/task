@@ -104,7 +104,7 @@ test('can delete a workspace', function () {
     $response->assertStatus(200)
         ->assertJsonPath('success', true);
 
-    $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
+    $this->assertSoftDeleted('workspaces', ['id' => $workspace->id]);
 });
 
 test('unauthorized users cannot update other users workspaces', function () {
@@ -427,10 +427,10 @@ test('deleting a workspace also deletes all its descendants', function () {
 
     $response->assertStatus(200);
 
-    // Verify all are deleted
-    $this->assertDatabaseMissing('workspaces', ['id' => $root->id]);
-    $this->assertDatabaseMissing('workspaces', ['id' => $child->id]);
-    $this->assertDatabaseMissing('workspaces', ['id' => $grandchild->id]);
+    // Verify all are soft-deleted
+    $this->assertSoftDeleted('workspaces', ['id' => $root->id]);
+    $this->assertSoftDeleted('workspaces', ['id' => $child->id]);
+    $this->assertSoftDeleted('workspaces', ['id' => $grandchild->id]);
 });
 
 test('moving a root workspace to root (same location) does not trigger name conflict', function () {
@@ -517,4 +517,48 @@ test('can retrieve only root workspaces', function () {
     $response->assertStatus(200)
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.id', $root->id);
+});
+
+test('deleting a workspace soft deletes it and its children', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $child = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $parent->id,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->deleteJson("/api/workspaces/{$parent->id}");
+
+    $response->assertStatus(200);
+
+    $this->assertSoftDeleted('workspaces', ['id' => $parent->id]);
+    $this->assertSoftDeleted('workspaces', ['id' => $child->id]);
+
+    // Ensure they are hidden from index
+    $indexResponse = $this->actingAs($this->user)->getJson('/api/workspaces');
+    $indexResponse->assertStatus(200)->assertJsonCount(0, 'data');
+});
+
+test('can restore a soft-deleted workspace and its children', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $child = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $parent->id,
+    ]);
+
+    // Soft delete
+    $this->actingAs($this->user)->deleteJson("/api/workspaces/{$parent->id}");
+
+    // Restore
+    $response = $this->actingAs($this->user)
+        ->postJson("/api/workspaces/{$parent->id}/restore");
+
+    $response->assertStatus(200);
+
+    $this->assertDatabaseHas('workspaces', ['id' => $parent->id, 'deleted_at' => null]);
+    $this->assertDatabaseHas('workspaces', ['id' => $child->id, 'deleted_at' => null]);
+
+    // Ensure they are visible again
+    $indexResponse = $this->actingAs($this->user)->getJson('/api/workspaces');
+    $indexResponse->assertStatus(200)->assertJsonCount(2, 'data');
 });

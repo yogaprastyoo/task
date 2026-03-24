@@ -24,6 +24,14 @@ class WorkspaceRepository
     }
 
     /**
+     * Find a workspace by ID, including soft-deleted ones.
+     */
+    public function findWithTrashed(int $id): Workspace
+    {
+        return Workspace::withTrashed()->findOrFail($id);
+    }
+
+    /**
      * Update a workspace.
      */
     public function update(Workspace $workspace, array $data): Workspace
@@ -39,6 +47,14 @@ class WorkspaceRepository
     public function delete(Workspace $workspace): bool
     {
         return $workspace->delete();
+    }
+
+    /**
+     * Restore a soft-deleted workspace.
+     */
+    public function restore(Workspace $workspace): bool
+    {
+        return $workspace->restore();
     }
 
     /**
@@ -124,9 +140,11 @@ class WorkspaceRepository
     {
         $workspace->update(['depth' => $newDepth]);
 
-        // Ensure children are loaded for the subtree update
+        // Ensure children (including trashed) are loaded for the subtree update
         if (! $workspace->relationLoaded('children')) {
-            $workspace->load('children');
+            $workspace->load(['children' => function ($query) {
+                $query->withTrashed();
+            }]);
         }
 
         foreach ($workspace->children as $child) {
