@@ -217,6 +217,13 @@ class WorkspaceService
             abort(403, 'Unauthorized to restore this workspace.');
         }
 
+        if ($this->repository->findByNameAndParent($userId, $workspace->parent_id, $workspace->name)) {
+            $levelMessage = $workspace->parent_id ? 'at this parent level' : 'at the root level';
+            throw ValidationException::withMessages([
+                'name' => ["Cannot restore workspace because an active workspace with this name already exists {$levelMessage}."],
+            ]);
+        }
+
         $this->performRecursiveRestore($workspace);
 
         return $workspace->refresh();
