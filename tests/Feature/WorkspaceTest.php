@@ -1061,3 +1061,62 @@ it('unarchives descendants recursively', function () {
     expect($parent->refresh()->is_archived)->toBeFalse();
     expect($child->refresh()->is_archived)->toBeFalse();
 });
+
+describe('Workspace Global Search (#42)', function () {
+    it('can search workspaces globally by name and returns flat list with paths', function () {
+        $root = Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'Project Alpha']);
+        $child = Workspace::factory()->create([
+            'owner_id' => $this->user->id,
+            'parent_id' => $root->id,
+            'name' => 'Alpha Marketing',
+        ]);
+        $grandchild = Workspace::factory()->create([
+            'owner_id' => $this->user->id,
+            'parent_id' => $child->id,
+            'name' => 'Alpha Logo Design',
+        ]);
+
+        // Search for "Alpha"
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces?search=Alpha');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(3, 'data');
+
+        $data = $response->json('data');
+
+        // Check paths
+        expect(collect($data)->firstWhere('name', 'Project Alpha')['path'])->toBe('Project Alpha');
+        expect(collect($data)->firstWhere('name', 'Alpha Marketing')['path'])->toBe('Project Alpha > Alpha Marketing');
+        expect(collect($data)->firstWhere('name', 'Alpha Logo Design')['path'])->toBe('Project Alpha > Alpha Marketing > Alpha Logo Design');
+    });
+
+    it('returns empty list when no workspaces match the search term', function () {
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'Existing']);
+
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces?search=NonExistent');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(0, 'data');
+    });
+
+    it('does not return workspaces owned by other users in search results', function () {
+        $otherUser = User::factory()->create();
+        Workspace::factory()->create(['owner_id' => $otherUser->id, 'name' => 'Other Alpha']);
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'My Alpha']);
+
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces?search=Alpha');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'My Alpha');
+    });
+
+    it('is case-insensitive when searching (using LIKE)', function () {
+        Workspace::factory()->create(['owner_id' => $this->user->id, 'name' => 'CASE SENSITIVE']);
+
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces?search=case');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data');
+    });
+});

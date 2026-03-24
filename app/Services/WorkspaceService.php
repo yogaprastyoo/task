@@ -362,4 +362,39 @@ class WorkspaceService
 
         $this->repository->restore($workspace);
     }
+
+    /**
+     * Search workspaces globally for a user and include their hierarchical path.
+     */
+    public function searchWorkspaces(int $userId, string $keyword): array
+    {
+        $workspaces = $this->repository->searchByOwner($userId, $keyword);
+
+        return $workspaces->map(function ($workspace) {
+            return [
+                'id' => $workspace->id,
+                'name' => $workspace->name,
+                'path' => $this->constructPath($workspace),
+                'is_archived' => $workspace->is_archived,
+                'settings' => $workspace->settings,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Helper to construct the full hierarchical path string for a workspace.
+     */
+    protected function constructPath(Workspace $workspace): string
+    {
+        $parts = [$workspace->name];
+        $current = $workspace;
+
+        // Since max depth is 3, parent.parent covers the full potential hierarchy
+        while ($current->parent) {
+            array_unshift($parts, $current->parent->name);
+            $current = $current->parent;
+        }
+
+        return implode(' > ', $parts);
+    }
 }

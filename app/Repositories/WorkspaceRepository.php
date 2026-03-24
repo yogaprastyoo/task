@@ -200,6 +200,17 @@ class WorkspaceRepository
     }
 
     /**
+     * Search workspaces by name for a specific owner across all hierarchy levels.
+     */
+    public function searchByOwner(int $ownerId, string $keyword): Collection
+    {
+        return Workspace::with('parent.parent')
+            ->where('owner_id', $ownerId)
+            ->where('name', 'LIKE', "%{$keyword}%")
+            ->get();
+    }
+
+    /**
      * Get the ancestors of a workspace from root down to the workspace itself.
      *
      * @return array<int, array{id: int, name: string}>
