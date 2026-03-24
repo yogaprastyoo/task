@@ -17,4 +17,5 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::apiResource('/workspaces', WorkspaceController::class);
+    Route::patch('/workspaces/{id}/move', [WorkspaceController::class, 'move']);
 });

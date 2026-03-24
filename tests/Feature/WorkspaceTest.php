@@ -246,3 +246,172 @@ test('allows same name under different parents', function () {
     $response->assertStatus(201)
         ->assertJsonPath('success', true);
 });
+
+test('can move a root workspace to be a child of another workspace', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+    $newParent = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => $newParent->id,
+        ]);
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.parent_id', $newParent->id)
+        ->assertJsonPath('data.depth', 2);
+
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'parent_id' => $newParent->id,
+        'depth' => 2,
+    ]);
+});
+
+test('can move a child workspace to be a root workspace', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+    $workspace = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $parent->id,
+        'depth' => 2,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => null,
+        ]);
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.parent_id', null)
+        ->assertJsonPath('data.depth', 1);
+});
+
+test('cannot move a workspace to itself', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => $workspace->id,
+        ]);
+
+    $response->assertStatus(422)
+        ->assertJsonPath('message', 'Cannot move a workspace to itself.');
+});
+
+test('cannot move a workspace to its own descendant (circular)', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+    $child = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $parent->id,
+        'depth' => 2,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$parent->id}/move", [
+            'parent_id' => $child->id,
+        ]);
+
+    $response->assertStatus(422)
+        ->assertJsonPath('message', 'Circular dependency detected: Cannot move a workspace to its own descendant.');
+});
+
+test('recalculates depth for the whole subtree after move', function () {
+    $oldRoot = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+    $workspace = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $oldRoot->id,
+        'depth' => 2,
+    ]);
+    $descendant = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $workspace->id,
+        'depth' => 3,
+    ]);
+
+    $newRoot = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => $newRoot->id,
+        ]);
+
+    $response->assertStatus(200);
+
+    // Workspace should now be at depth 2 (child of newRoot at depth 1)
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $workspace->id,
+        'depth' => 2,
+        'parent_id' => $newRoot->id,
+    ]);
+
+    // Descendant should now be at depth 3
+    $this->assertDatabaseHas('workspaces', [
+        'id' => $descendant->id,
+        'depth' => 3,
+        'parent_id' => $workspace->id,
+    ]);
+});
+
+test('blocks move if it would exceed depth limit', function () {
+    // Level 1 -> Level 2
+    $movedParent = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+    $movedChild = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $movedParent->id,
+        'depth' => 2,
+    ]);
+
+    // Destination is at Level 2
+    $destRoot = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+    $destParent = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $destRoot->id,
+        'depth' => 2,
+    ]);
+
+    // Moving $movedParent (height 2) under $destParent (depth 2) would result in depth 4 (2+2)
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$movedParent->id}/move", [
+            'parent_id' => $destParent->id,
+        ]);
+
+    $response->assertStatus(422)
+        ->assertJsonPath('message', 'Moving this workspace would exceed the maximum depth of 3.');
+});
+
+test('cannot move workspace owned by another user', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->otherUser->id]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => null,
+        ]);
+
+    $response->assertStatus(403);
+});
+
+test('cannot move workspace to a parent where a sibling with the same name exists', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+
+    // Existing sibling under $parent
+    Workspace::factory()->create([
+        'name' => 'Conflict Name',
+        'owner_id' => $this->user->id,
+        'parent_id' => $parent->id,
+        'depth' => 2,
+    ]);
+
+    // Workspace to move (currently root)
+    $workspace = Workspace::factory()->create([
+        'name' => 'Conflict Name',
+        'owner_id' => $this->user->id,
+        'depth' => 1,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => $parent->id,
+        ]);
+
+    $response->assertStatus(422)
+        ->assertJsonPath('message', 'A workspace with this name already exists at this parent level.');
+});
