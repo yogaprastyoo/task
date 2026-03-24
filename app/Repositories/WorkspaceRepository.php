@@ -63,10 +63,8 @@ class WorkspaceRepository
     /**
      * Check if a workspace is a descendant of another.
      */
-    public function isDescendant(int $parentId, int $childId): bool
+    public function isDescendant(int $parentId, Workspace $child): bool
     {
-        $child = $this->findOrFail($childId);
-
         if ($child->parent_id === $parentId) {
             return true;
         }
@@ -75,7 +73,9 @@ class WorkspaceRepository
             return false;
         }
 
-        return $this->isDescendant($parentId, $child->parent_id);
+        $parent = $this->findOrFail($child->parent_id);
+
+        return $this->isDescendant($parentId, $parent);
     }
 
     /**
@@ -84,10 +84,21 @@ class WorkspaceRepository
      */
     public function getSubtreeHeight(Workspace $workspace): int
     {
+        // Eager load descendants to avoid N+1 queries during recursion (max depth 3)
+        $workspace->load('children.children');
+
+        return $this->calculateSubtreeHeight($workspace);
+    }
+
+    /**
+     * Helper to recursively calculate height without redundant loads.
+     */
+    protected function calculateSubtreeHeight(Workspace $workspace): int
+    {
         $maxChildHeight = 0;
 
         foreach ($workspace->children as $child) {
-            $childHeight = $this->getSubtreeHeight($child);
+            $childHeight = $this->calculateSubtreeHeight($child);
             if ($childHeight > $maxChildHeight) {
                 $maxChildHeight = $childHeight;
             }
@@ -102,6 +113,11 @@ class WorkspaceRepository
     public function updateSubtreeDepths(Workspace $workspace, int $newDepth): void
     {
         $workspace->update(['depth' => $newDepth]);
+
+        // Ensure children are loaded for the subtree update
+        if (! $workspace->relationLoaded('children')) {
+            $workspace->load('children');
+        }
 
         foreach ($workspace->children as $child) {
             $this->updateSubtreeDepths($child, $newDepth + 1);

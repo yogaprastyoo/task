@@ -388,3 +388,30 @@ test('cannot move workspace owned by another user', function () {
 
     $response->assertStatus(403);
 });
+
+test('cannot move workspace to a parent where a sibling with the same name exists', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+
+    // Existing sibling under $parent
+    Workspace::factory()->create([
+        'name' => 'Conflict Name',
+        'owner_id' => $this->user->id,
+        'parent_id' => $parent->id,
+        'depth' => 2,
+    ]);
+
+    // Workspace to move (currently root)
+    $workspace = Workspace::factory()->create([
+        'name' => 'Conflict Name',
+        'owner_id' => $this->user->id,
+        'depth' => 1,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => $parent->id,
+        ]);
+
+    $response->assertStatus(422)
+        ->assertJsonPath('message', 'A workspace with this name already exists at this parent level.');
+});
