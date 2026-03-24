@@ -432,3 +432,36 @@ test('deleting a workspace also deletes all its descendants', function () {
     $this->assertDatabaseMissing('workspaces', ['id' => $child->id]);
     $this->assertDatabaseMissing('workspaces', ['id' => $grandchild->id]);
 });
+
+test('moving a root workspace to root (same location) does not trigger name conflict', function () {
+    $workspace = Workspace::factory()->create([
+        'name' => 'Root Workspace',
+        'owner_id' => $this->user->id,
+        'parent_id' => null,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => null,
+        ]);
+
+    $response->assertStatus(200)
+        ->assertJsonPath('success', true);
+});
+
+test('moving a child workspace to the same parent does not trigger name conflict', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $workspace = Workspace::factory()->create([
+        'name' => 'Child Workspace',
+        'owner_id' => $this->user->id,
+        'parent_id' => $parent->id,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/workspaces/{$workspace->id}/move", [
+            'parent_id' => $parent->id,
+        ]);
+
+    $response->assertStatus(200)
+        ->assertJsonPath('success', true);
+});
