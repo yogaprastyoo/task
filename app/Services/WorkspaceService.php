@@ -213,6 +213,10 @@ class WorkspaceService
     {
         $workspace = $this->repository->findWithTrashed($id);
 
+        if (! $workspace->trashed()) {
+            abort(404, 'Workspace not found in trash.');
+        }
+
         if ($workspace->owner_id !== $userId) {
             abort(403, 'Unauthorized to restore this workspace.');
         }
