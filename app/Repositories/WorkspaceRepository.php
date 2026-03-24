@@ -206,6 +206,9 @@ class WorkspaceRepository
      */
     public function getAncestors(Workspace $workspace): array
     {
+        // Load parents recursively up to max depth (3) in one go
+        $workspace->load('parent.parent');
+
         $ancestors = [];
         $current = $workspace;
 
@@ -214,7 +217,7 @@ class WorkspaceRepository
                 'id' => $current->id,
                 'name' => $current->name,
             ]);
-            $current = $current->parent_id ? $this->findOrFail($current->parent_id) : null;
+            $current = $current->parent;
         }
 
         return $ancestors;
