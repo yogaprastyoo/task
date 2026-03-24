@@ -1119,4 +1119,10 @@ describe('Workspace Global Search (#42)', function () {
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data');
     });
+
+    it('rejects empty search parameter', function () {
+        $this->actingAs($this->user)
+            ->getJson('/api/workspaces?search=')
+            ->assertStatus(422);
+    });
 });

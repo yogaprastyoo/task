@@ -23,7 +23,7 @@ class SearchWorkspaceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'search' => 'nullable|string|min:1',
+            'search' => 'filled|string|min:1',
             'include_archived' => 'nullable|boolean',
         ];
     }

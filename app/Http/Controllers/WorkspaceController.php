@@ -43,7 +43,7 @@ class WorkspaceController extends Controller
      */
     public function index(SearchWorkspaceRequest $request): JsonResponse
     {
-        $search = request('search');
+        $search = $request->validated('search');
 
         if ($search) {
             $workspaces = $this->service->searchWorkspaces(Auth::id(), $search);
@@ -51,7 +51,7 @@ class WorkspaceController extends Controller
             return ApiResponse::success($workspaces, 'Search results retrieved successfully');
         }
 
-        $includeArchived = request()->boolean('include_archived');
+        $includeArchived = $request->boolean('include_archived');
         $workspaces = $this->service->getWorkspaces(Auth::id(), $includeArchived);
 
         return ApiResponse::success($workspaces, 'Workspaces retrieved successfully');
