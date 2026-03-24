@@ -49,8 +49,9 @@ class WorkspaceService
             throw new Exception('Unauthorized to access this workspace.', 403);
         }
 
-        // Eager load child workspaces to show contents
+        // Eager load child workspaces and their count
         $workspace->load('children');
+        $workspace->loadCount('children');
 
         return $workspace;
     }

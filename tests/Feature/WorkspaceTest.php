@@ -765,7 +765,60 @@ test('children hidden from show response after being soft-deleted', function () 
         ->assertJsonCount(0, 'data.children');
 });
 
+describe('Workspace Summary Counter (#39)', function () {
+    it('includes children_count in the index response', function () {
+        $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+        Workspace::factory()->count(3)->create([
+            'owner_id' => $this->user->id,
+            'parent_id' => $parent->id,
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces');
+
+        $response->assertStatus(200);
+
+        $parentData = collect($response->json('data'))->firstWhere('id', $parent->id);
+        expect($parentData['children_count'])->toBe(3);
+    });
+
+    it('includes children_count as 0 when workspace has no children', function () {
+        Workspace::factory()->create(['owner_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.0.children_count', 0);
+    });
+
+    it('includes children_count in the root response', function () {
+        $root = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => null]);
+        Workspace::factory()->count(2)->create([
+            'owner_id' => $this->user->id,
+            'parent_id' => $root->id,
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces/root');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.0.children_count', 2);
+    });
+
+    it('includes children_count in the show response', function () {
+        $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+        Workspace::factory()->count(2)->create([
+            'owner_id' => $this->user->id,
+            'parent_id' => $parent->id,
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/workspaces/{$parent->id}");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.children_count', 2);
+    });
+});
+
 describe('Workspace Archiving and Settings (#41)', function () {
+
     beforeEach(function () {
         $this->user = User::factory()->create();
     });
