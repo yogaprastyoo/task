@@ -765,7 +765,78 @@ test('children hidden from show response after being soft-deleted', function () 
         ->assertJsonCount(0, 'data.children');
 });
 
+describe('Workspace Breadcrumbs (#38)', function () {
+    it('returns breadcrumbs for a root workspace', function () {
+        $root = Workspace::factory()->create(['owner_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/workspaces/{$root->id}/breadcrumbs");
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $root->id)
+            ->assertJsonPath('data.0.name', $root->name);
+    });
+
+    it('returns breadcrumbs ordered root to child for a 2-level workspace', function () {
+        $root = Workspace::factory()->create(['owner_id' => $this->user->id]);
+        $child = Workspace::factory()->create([
+            'owner_id' => $this->user->id,
+            'parent_id' => $root->id,
+            'depth' => 2,
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/workspaces/{$child->id}/breadcrumbs");
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.id', $root->id)
+            ->assertJsonPath('data.1.id', $child->id);
+    });
+
+    it('returns breadcrumbs ordered root to grandchild for a 3-level workspace', function () {
+        $root = Workspace::factory()->create(['owner_id' => $this->user->id]);
+        $child = Workspace::factory()->create([
+            'owner_id' => $this->user->id,
+            'parent_id' => $root->id,
+            'depth' => 2,
+        ]);
+        $grandchild = Workspace::factory()->create([
+            'owner_id' => $this->user->id,
+            'parent_id' => $child->id,
+            'depth' => 3,
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/workspaces/{$grandchild->id}/breadcrumbs");
+
+        $response->assertStatus(200)
+            ->assertJsonCount(3, 'data')
+            ->assertJsonPath('data.0.id', $root->id)
+            ->assertJsonPath('data.1.id', $child->id)
+            ->assertJsonPath('data.2.id', $grandchild->id);
+    });
+
+    it('returns 403 when accessing breadcrumbs of another user workspace', function () {
+        $otherUser = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $otherUser->id]);
+
+        $this->actingAs($this->user)
+            ->getJson("/api/workspaces/{$workspace->id}/breadcrumbs")
+            ->assertStatus(403);
+    });
+
+    it('returns only id and name in each breadcrumb item', function () {
+        $root = Workspace::factory()->create(['owner_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/workspaces/{$root->id}/breadcrumbs");
+
+        $response->assertStatus(200);
+        $item = $response->json('data.0');
+        expect(array_keys($item))->toBe(['id', 'name']);
+    });
+});
+
 describe('Workspace Summary Counter (#39)', function () {
+
     it('includes children_count in the index response', function () {
         $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
         Workspace::factory()->count(3)->create([

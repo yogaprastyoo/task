@@ -23,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::patch('/workspaces/{id}/move', [WorkspaceController::class, 'move']);
     Route::patch('/workspaces/{id}/archive', [WorkspaceController::class, 'archive']);
+    Route::get('/workspaces/{id}/breadcrumbs', [WorkspaceController::class, 'breadcrumbs']);
     Route::post('/workspaces/{workspace}/restore', [WorkspaceController::class, 'restore'])->withTrashed();
 
 });

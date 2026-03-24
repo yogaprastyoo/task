@@ -57,6 +57,22 @@ class WorkspaceService
     }
 
     /**
+     * Get the breadcrumbs (ancestor path) for a workspace.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    public function getBreadcrumbs(int $userId, int $id): array
+    {
+        $workspace = $this->repository->findOrFail($id);
+
+        if ($workspace->owner_id !== $userId) {
+            throw new Exception('Unauthorized to access this workspace.', 403);
+        }
+
+        return $this->repository->getAncestors($workspace);
+    }
+
+    /**
      * Create a new workspace (Root or Child).
      */
     public function createWorkspace(int $userId, array $data): Workspace
