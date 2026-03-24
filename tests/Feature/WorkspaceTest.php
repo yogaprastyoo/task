@@ -627,3 +627,21 @@ test('cannot restore a workspace if an active workspace has the same name', func
         ->assertJsonPath('success', false)
         ->assertJsonPath('message', 'Cannot restore workspace because an active workspace with this name already exists at the root level.');
 });
+
+test('cannot restore an active workspace', function () {
+    $workspace = Workspace::factory()->create([
+        'name' => 'Active Workspace',
+        'owner_id' => $this->user->id,
+        'parent_id' => null,
+    ]);
+
+    // Do NOT soft delete it. It is active.
+
+    // Attempt to restore it
+    $response = $this->actingAs($this->user)
+        ->postJson("/api/workspaces/{$workspace->id}/restore");
+
+    $response->assertStatus(404)
+        ->assertJsonPath('success', false)
+        ->assertJsonPath('message', 'Resource not found.');
+});
