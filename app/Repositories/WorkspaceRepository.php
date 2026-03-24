@@ -62,7 +62,8 @@ class WorkspaceRepository
      */
     public function getByOwner(int $ownerId, bool $includeArchived = false): Collection
     {
-        $query = Workspace::where('owner_id', $ownerId);
+        $query = Workspace::withCount('children')
+            ->where('owner_id', $ownerId);
 
         if (! $includeArchived) {
             $query->where('is_archived', false);
@@ -76,7 +77,8 @@ class WorkspaceRepository
      */
     public function getRootByOwner(int $ownerId, bool $includeArchived = false): Collection
     {
-        $query = Workspace::where('owner_id', $ownerId)
+        $query = Workspace::withCount('children')
+            ->where('owner_id', $ownerId)
             ->whereNull('parent_id');
 
         if (! $includeArchived) {
