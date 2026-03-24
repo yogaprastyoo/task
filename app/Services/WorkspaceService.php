@@ -92,4 +92,48 @@ class WorkspaceService
 
         $this->repository->delete($workspace);
     }
+
+    /**
+     * Move a workspace to a new parent.
+     */
+    public function moveWorkspace(int $id, ?int $parentId): Workspace
+    {
+        $workspace = $this->repository->findOrFail($id);
+        $ownerId = Auth::id();
+
+        if ($workspace->owner_id !== $ownerId) {
+            throw new Exception('Unauthorized to move this workspace.', 403);
+        }
+
+        $newDepth = 1;
+
+        if ($parentId) {
+            if ($parentId === $id) {
+                throw new Exception('Cannot move a workspace to itself.', 422);
+            }
+
+            $parent = $this->repository->findOrFail($parentId);
+
+            if ($parent->owner_id !== $ownerId) {
+                throw new Exception('Parent workspace does not belong to you.', 403);
+            }
+
+            if ($this->repository->isDescendant($id, $parentId)) {
+                throw new Exception('Circular dependency detected: Cannot move a workspace to its own descendant.', 422);
+            }
+
+            $newDepth = $parent->depth + 1;
+        }
+
+        $subtreeHeight = $this->repository->getSubtreeHeight($workspace);
+
+        if (($newDepth + $subtreeHeight - 1) > 3) {
+            throw new Exception('Moving this workspace would exceed the maximum depth of 3.', 422);
+        }
+
+        $workspace = $this->repository->update($workspace, ['parent_id' => $parentId]);
+        $this->repository->updateSubtreeDepths($workspace, $newDepth);
+
+        return $workspace;
+    }
 }

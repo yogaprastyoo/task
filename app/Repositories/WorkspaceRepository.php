@@ -59,4 +59,52 @@ class WorkspaceRepository
             ->where('name', $name)
             ->first();
     }
+
+    /**
+     * Check if a workspace is a descendant of another.
+     */
+    public function isDescendant(int $parentId, int $childId): bool
+    {
+        $child = $this->findOrFail($childId);
+
+        if ($child->parent_id === $parentId) {
+            return true;
+        }
+
+        if ($child->parent_id === null) {
+            return false;
+        }
+
+        return $this->isDescendant($parentId, $child->parent_id);
+    }
+
+    /**
+     * Get the maximum height of the subtree starting from this workspace.
+     * Root of subtree is height 1.
+     */
+    public function getSubtreeHeight(Workspace $workspace): int
+    {
+        $maxChildHeight = 0;
+
+        foreach ($workspace->children as $child) {
+            $childHeight = $this->getSubtreeHeight($child);
+            if ($childHeight > $maxChildHeight) {
+                $maxChildHeight = $childHeight;
+            }
+        }
+
+        return 1 + $maxChildHeight;
+    }
+
+    /**
+     * Update the depth of a workspace and all its descendants recursively.
+     */
+    public function updateSubtreeDepths(Workspace $workspace, int $newDepth): void
+    {
+        $workspace->update(['depth' => $newDepth]);
+
+        foreach ($workspace->children as $child) {
+            $this->updateSubtreeDepths($child, $newDepth + 1);
+        }
+    }
 }

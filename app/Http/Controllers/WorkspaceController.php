@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Requests\MoveWorkspaceRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
 use App\Services\WorkspaceService;
@@ -52,5 +53,15 @@ class WorkspaceController extends Controller
         $this->service->deleteWorkspace($id);
 
         return ApiResponse::success(null, 'Workspace deleted successfully');
+    }
+
+    /**
+     * Move the specified workspace to a new parent.
+     */
+    public function move(int $id, MoveWorkspaceRequest $request): JsonResponse
+    {
+        $workspace = $this->service->moveWorkspace($id, $request->parent_id);
+
+        return ApiResponse::success($workspace, 'Workspace moved successfully');
     }
 }
