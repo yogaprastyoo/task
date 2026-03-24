@@ -415,3 +415,20 @@ test('cannot move workspace to a parent where a sibling with the same name exist
     $response->assertStatus(422)
         ->assertJsonPath('message', 'A workspace with this name already exists at this parent level.');
 });
+
+test('deleting a workspace also deletes all its descendants', function () {
+    // Root -> Child -> Grandchild
+    $root = Workspace::factory()->create(['owner_id' => $this->user->id, 'depth' => 1]);
+    $child = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $root->id, 'depth' => 2]);
+    $grandchild = Workspace::factory()->create(['owner_id' => $this->user->id, 'parent_id' => $child->id, 'depth' => 3]);
+
+    $response = $this->actingAs($this->user)
+        ->deleteJson("/api/workspaces/{$root->id}");
+
+    $response->assertStatus(200);
+
+    // Verify all are deleted
+    $this->assertDatabaseMissing('workspaces', ['id' => $root->id]);
+    $this->assertDatabaseMissing('workspaces', ['id' => $child->id]);
+    $this->assertDatabaseMissing('workspaces', ['id' => $grandchild->id]);
+});

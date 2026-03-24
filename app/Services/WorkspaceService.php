@@ -78,7 +78,7 @@ class WorkspaceService
     }
 
     /**
-     * Delete a workspace.
+     * Delete a workspace and all its descendants.
      */
     public function deleteWorkspace(int $userId, int $id): void
     {
@@ -86,6 +86,21 @@ class WorkspaceService
 
         if ($workspace->owner_id !== $userId) {
             throw new Exception('Unauthorized to delete this workspace.', 403);
+        }
+
+        $this->performRecursiveDelete($workspace);
+    }
+
+    /**
+     * Helper to recursively delete descendants.
+     */
+    protected function performRecursiveDelete(Workspace $workspace): void
+    {
+        // Load children to avoid N+1 queries
+        $workspace->load('children');
+
+        foreach ($workspace->children as $child) {
+            $this->performRecursiveDelete($child);
         }
 
         $this->repository->delete($workspace);
