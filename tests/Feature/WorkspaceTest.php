@@ -775,8 +775,10 @@ describe('Workspace Summary Counter (#39)', function () {
 
         $response = $this->actingAs($this->user)->getJson('/api/workspaces');
 
-        $response->assertStatus(200)
-            ->assertJsonPath('data.0.children_count', 3);
+        $response->assertStatus(200);
+
+        $parentData = collect($response->json('data'))->firstWhere('id', $parent->id);
+        expect($parentData['children_count'])->toBe(3);
     });
 
     it('includes children_count as 0 when workspace has no children', function () {
