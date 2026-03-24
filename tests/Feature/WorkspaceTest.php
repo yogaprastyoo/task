@@ -485,3 +485,19 @@ test('unauthorized users cannot view other users workspaces', function () {
 
     $response->assertStatus(403);
 });
+
+test('retrieving a workspace includes its children', function () {
+    $parent = Workspace::factory()->create(['owner_id' => $this->user->id]);
+    $child = Workspace::factory()->create([
+        'owner_id' => $this->user->id,
+        'parent_id' => $parent->id,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/api/workspaces/{$parent->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data.children')
+        ->assertJsonPath('data.children.0.id', $child->id);
+});
+
