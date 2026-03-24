@@ -22,6 +22,20 @@ class WorkspaceService
     }
 
     /**
+     * Find a specific workspace with ownership validation.
+     */
+    public function findWorkspace(int $userId, int $id): Workspace
+    {
+        $workspace = $this->repository->findOrFail($id);
+
+        if ($workspace->owner_id !== $userId) {
+            throw new Exception('Unauthorized to access this workspace.', 403);
+        }
+
+        return $workspace;
+    }
+
+    /**
      * Create a new workspace (Root or Child).
      */
     public function createWorkspace(int $userId, array $data): Workspace

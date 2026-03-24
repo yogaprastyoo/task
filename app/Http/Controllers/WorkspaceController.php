@@ -47,6 +47,16 @@ class WorkspaceController extends Controller
     }
 
     /**
+     * Display the specified workspace.
+     */
+    public function show(int $id): JsonResponse
+    {
+        $workspace = $this->service->findWorkspace(Auth::id(), $id);
+
+        return ApiResponse::success($workspace, 'Workspace retrieved successfully');
+    }
+
+    /**
      * Remove the specified workspace from storage.
      */
     public function destroy(int $id): JsonResponse
