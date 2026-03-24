@@ -465,3 +465,23 @@ test('moving a child workspace to the same parent does not trigger name conflict
     $response->assertStatus(200)
         ->assertJsonPath('success', true);
 });
+
+test('can retrieve a specific workspace', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/api/workspaces/{$workspace->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.id', $workspace->id);
+});
+
+test('unauthorized users cannot view other users workspaces', function () {
+    $workspace = Workspace::factory()->create(['owner_id' => $this->otherUser->id]);
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/api/workspaces/{$workspace->id}");
+
+    $response->assertStatus(403);
+});
