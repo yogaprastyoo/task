@@ -151,4 +151,14 @@ class WorkspaceRepository
             $this->updateSubtreeDepths($child, $newDepth + 1);
         }
     }
+
+    /**
+     * Get all soft-deleted workspaces for a specific owner.
+     */
+    public function getTrashedByOwner(int $ownerId): Collection
+    {
+        return Workspace::onlyTrashed()
+            ->where('owner_id', $ownerId)
+            ->get();
+    }
 }
