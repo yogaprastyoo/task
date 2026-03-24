@@ -25,8 +25,6 @@ class StoreWorkspaceRequest extends FormRequest
             'parent_id' => ['nullable', 'integer', Rule::exists('workspaces', 'id')->whereNull('deleted_at')],
             'icon' => ['nullable', 'string', 'max:50'],
             'color' => ['nullable', 'string', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
-            'is_archived' => ['boolean'],
-
         ];
     }
 }

@@ -128,11 +128,6 @@ class WorkspaceService
             $updateData['name'] = $data['name'];
         }
 
-        if (isset($data['is_archived']) && $data['is_archived'] !== $workspace->is_archived) {
-            $this->performRecursiveArchive($workspace, $data['is_archived']);
-            $updateData['is_archived'] = $data['is_archived'];
-        }
-
         // Handle settings merging
 
         if (isset($data['icon']) || isset($data['color'])) {
@@ -167,7 +162,7 @@ class WorkspaceService
         $workspace = $this->repository->findOrFail($id);
 
         if ($workspace->owner_id !== $userId) {
-            abort(403, 'Unauthorized to archive this workspace.');
+            throw new Exception('Unauthorized to archive this workspace.', 403);
         }
 
         $newStatus = ! $workspace->is_archived;
@@ -179,19 +174,35 @@ class WorkspaceService
     }
 
     /**
-     * Helper to recursively archive or unarchive descendants.
+     * Helper to recursively collect all descendant IDs and bulk-update archive status.
      */
     protected function performRecursiveArchive(Workspace $workspace, bool $status): void
     {
-        // Load children (including trashed) to ensure the whole subtree is consistent
+        $ids = $this->collectDescendantIds($workspace);
+
+        if (! empty($ids)) {
+            $this->repository->bulkUpdateArchiveStatus($ids, $status);
+        }
+    }
+
+    /**
+     * Recursively collect IDs of all descendants.
+     *
+     * @return array<int>
+     */
+    protected function collectDescendantIds(Workspace $workspace): array
+    {
         $workspace->load(['children' => function ($query) {
             $query->withTrashed();
         }]);
 
+        $ids = [];
         foreach ($workspace->children as $child) {
-            $this->performRecursiveArchive($child, $status);
-            $this->repository->update($child, ['is_archived' => $status]);
+            $ids[] = $child->id;
+            $ids = array_merge($ids, $this->collectDescendantIds($child));
         }
+
+        return $ids;
     }
 
     /**
@@ -202,7 +213,7 @@ class WorkspaceService
         $workspace = $this->repository->findOrFail($id);
 
         if ($workspace->owner_id !== $userId) {
-            abort(403, 'Unauthorized to delete this workspace.');
+            throw new Exception('Unauthorized to delete this workspace.', 403);
         }
 
         $this->performRecursiveDelete($workspace);

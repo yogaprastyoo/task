@@ -174,15 +174,26 @@ class WorkspaceRepository
     }
 
     /**
-     * Get all archived workspaces for a specific owner.
+     * Get all archived workspaces for a specific owner (top-level only).
+     * Returns only archived workspaces whose parent is not archived.
      */
     public function getArchivedByOwner(int $ownerId): Collection
     {
         return Workspace::where('owner_id', $ownerId)
             ->where('is_archived', true)
             ->whereDoesntHave('parent', function ($query) {
-                $query->where('is_archived', true);
+                $query->withTrashed()->where('is_archived', true);
             })
             ->get();
+    }
+
+    /**
+     * Bulk update the archive status for a list of workspace IDs.
+     *
+     * @param  array<int>  $ids
+     */
+    public function bulkUpdateArchiveStatus(array $ids, bool $status): void
+    {
+        Workspace::withTrashed()->whereIn('id', $ids)->update(['is_archived' => $status]);
     }
 }
