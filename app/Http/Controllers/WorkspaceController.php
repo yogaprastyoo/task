@@ -27,6 +27,16 @@ class WorkspaceController extends Controller
     }
 
     /**
+     * Display a listing of root workspaces (parent_id is null).
+     */
+    public function root(): JsonResponse
+    {
+        $workspaces = $this->service->getRootWorkspaces(Auth::id());
+
+        return ApiResponse::success($workspaces, 'Root workspaces retrieved successfully');
+    }
+
+    /**
      * Store a newly created workspace in storage.
      */
     public function store(StoreWorkspaceRequest $request): JsonResponse
