@@ -18,6 +18,16 @@ class WorkspaceController extends Controller
     ) {}
 
     /**
+     * Display a listing of trashed workspaces.
+     */
+    public function trash(): JsonResponse
+    {
+        $workspaces = $this->service->getTrashedWorkspaces(Auth::id());
+
+        return ApiResponse::success($workspaces, 'Trashed workspaces retrieved successfully');
+    }
+
+    /**
      * Display a listing of the workspaces.
      */
     public function index(): JsonResponse

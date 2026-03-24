@@ -199,6 +199,14 @@ class WorkspaceService
     }
 
     /**
+     * Get all trashed workspaces for a user.
+     */
+    public function getTrashedWorkspaces(int $userId): Collection
+    {
+        return $this->repository->getTrashedByOwner($userId);
+    }
+
+    /**
      * Restore a soft-deleted workspace and all its descendants.
      */
     public function restoreWorkspace(int $userId, int $id): Workspace
