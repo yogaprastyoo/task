@@ -18,9 +18,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/workspaces/root', [WorkspaceController::class, 'root']);
     Route::get('/workspaces/trash', [WorkspaceController::class, 'trash']);
+    Route::get('/workspaces/archived', [WorkspaceController::class, 'archived']);
     Route::apiResource('/workspaces', WorkspaceController::class);
 
     Route::patch('/workspaces/{id}/move', [WorkspaceController::class, 'move']);
+    Route::patch('/workspaces/{id}/archive', [WorkspaceController::class, 'archive']);
     Route::post('/workspaces/{workspace}/restore', [WorkspaceController::class, 'restore'])->withTrashed();
 
 });

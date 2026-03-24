@@ -17,17 +17,17 @@ class WorkspaceService
     /**
      * Get all workspaces for the authenticated user.
      */
-    public function getWorkspaces(int $userId): Collection
+    public function getWorkspaces(int $userId, bool $includeArchived = false): Collection
     {
-        return $this->repository->getByOwner($userId);
+        return $this->repository->getByOwner($userId, $includeArchived);
     }
 
     /**
      * Get root workspaces for the authenticated user.
      */
-    public function getRootWorkspaces(int $userId): Collection
+    public function getRootWorkspaces(int $userId, bool $includeArchived = false): Collection
     {
-        return $this->repository->getRootByOwner($userId);
+        return $this->repository->getRootByOwner($userId, $includeArchived);
     }
 
     /**
@@ -78,18 +78,28 @@ class WorkspaceService
             ]);
         }
 
+        $settings = null;
+        if (isset($data['icon']) || isset($data['color'])) {
+            $settings = [
+                'icon' => $data['icon'] ?? null,
+                'color' => $data['color'] ?? null,
+            ];
+        }
+
         return $this->repository->create([
             'name' => $data['name'],
             'owner_id' => $userId,
             'parent_id' => $parentId,
             'depth' => $depth,
+            'settings' => $settings,
+            'is_archived' => $data['is_archived'] ?? false,
         ]);
     }
 
     /**
-     * Rename an existing workspace.
+     * Update an existing workspace.
      */
-    public function renameWorkspace(int $userId, int $id, string $name): Workspace
+    public function updateWorkspace(int $userId, int $id, array $data): Workspace
     {
         $workspace = $this->repository->findOrFail($id);
 
@@ -97,16 +107,61 @@ class WorkspaceService
             throw new Exception('Unauthorized to update this workspace.', 403);
         }
 
-        if ($name !== $workspace->name) {
-            if ($this->repository->findByNameAndParent($userId, $workspace->parent_id, $name)) {
+        $updateData = [];
+
+        if (isset($data['name']) && $data['name'] !== $workspace->name) {
+            if ($this->repository->findByNameAndParent($userId, $workspace->parent_id, $data['name'])) {
                 $levelMessage = $workspace->parent_id ? 'at this parent level' : 'at the root level';
                 throw ValidationException::withMessages([
                     'name' => ["A workspace with this name already exists {$levelMessage}."],
                 ]);
             }
+            $updateData['name'] = $data['name'];
         }
 
-        return $this->repository->update($workspace, ['name' => $name]);
+        if (isset($data['is_archived'])) {
+            $updateData['is_archived'] = $data['is_archived'];
+        }
+
+        // Handle settings merging
+        if (isset($data['icon']) || isset($data['color'])) {
+            $settings = $workspace->settings ?? [];
+            if (isset($data['icon'])) {
+                $settings['icon'] = $data['icon'];
+            }
+            if (isset($data['color'])) {
+                $settings['color'] = $data['color'];
+            }
+            $updateData['settings'] = $settings;
+        }
+
+        return $this->repository->update($workspace, $updateData);
+    }
+
+    /**
+     * Rename an existing workspace.
+     *
+     * @deprecated Use updateWorkspace instead
+     */
+    public function renameWorkspace(int $userId, int $id, string $name): Workspace
+    {
+        return $this->updateWorkspace($userId, $id, ['name' => $name]);
+    }
+
+    /**
+     * Toggle archive status of a workspace.
+     */
+    public function archiveWorkspace(int $userId, int $id): Workspace
+    {
+        $workspace = $this->repository->findOrFail($id);
+
+        if ($workspace->owner_id !== $userId) {
+            abort(403, 'Unauthorized to archive this workspace.');
+        }
+
+        return $this->repository->update($workspace, [
+            'is_archived' => ! $workspace->is_archived,
+        ]);
     }
 
     /**

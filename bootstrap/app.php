@@ -2,11 +2,14 @@
 
 use App\Helpers\ApiResponse;
 use App\Http\Middleware\GuestApi;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -32,14 +35,14 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (\Throwable $e, Request $request) {
+        $exceptions->render(function (Throwable $e, Request $request) {
             if ($request->is('api/*')) {
-                if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException || $e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
+                if ($e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
                     return ApiResponse::error('Resource not found.', 404);
                 }
 
                 $statusCode = 500;
-                if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                if ($e instanceof HttpExceptionInterface) {
                     $statusCode = $e->getStatusCode();
                 } elseif ($e->getCode() >= 400 && $e->getCode() <= 599) {
                     $statusCode = $e->getCode();
@@ -51,6 +54,5 @@ return Application::configure(basePath: dirname(__DIR__))
                 );
             }
         });
-
 
     })->create();

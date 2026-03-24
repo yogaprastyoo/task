@@ -19,7 +19,22 @@ class Workspace extends Model
         'owner_id',
         'parent_id',
         'depth',
+        'is_archived',
+        'settings',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_archived' => 'boolean',
+            'settings' => 'array',
+        ];
+    }
 
     /**
      * Get the user that owns the workspace.

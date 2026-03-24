@@ -60,19 +60,30 @@ class WorkspaceRepository
     /**
      * Get all workspaces owned by a user.
      */
-    public function getByOwner(int $ownerId): Collection
+    public function getByOwner(int $ownerId, bool $includeArchived = false): Collection
     {
-        return Workspace::where('owner_id', $ownerId)->get();
+        $query = Workspace::where('owner_id', $ownerId);
+
+        if (! $includeArchived) {
+            $query->where('is_archived', false);
+        }
+
+        return $query->get();
     }
 
     /**
      * Get root workspaces owned by a user.
      */
-    public function getRootByOwner(int $ownerId): Collection
+    public function getRootByOwner(int $ownerId, bool $includeArchived = false): Collection
     {
-        return Workspace::where('owner_id', $ownerId)
-            ->whereNull('parent_id')
-            ->get();
+        $query = Workspace::where('owner_id', $ownerId)
+            ->whereNull('parent_id');
+
+        if (! $includeArchived) {
+            $query->where('is_archived', false);
+        }
+
+        return $query->get();
     }
 
     /**
@@ -159,6 +170,16 @@ class WorkspaceRepository
     {
         return Workspace::onlyTrashed()
             ->where('owner_id', $ownerId)
+            ->get();
+    }
+
+    /**
+     * Get all archived workspaces for a specific owner.
+     */
+    public function getArchivedByOwner(int $ownerId): Collection
+    {
+        return Workspace::where('owner_id', $ownerId)
+            ->where('is_archived', true)
             ->get();
     }
 }
