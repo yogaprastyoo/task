@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
 use App\Http\Requests\MoveWorkspaceRequest;
+use App\Http\Requests\SearchWorkspaceRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
 use App\Models\Workspace;
@@ -38,11 +39,19 @@ class WorkspaceController extends Controller
     }
 
     /**
-     * Display a listing of the workspaces.
+     * Display a listing of the workspaces or search results.
      */
-    public function index(): JsonResponse
+    public function index(SearchWorkspaceRequest $request): JsonResponse
     {
-        $includeArchived = request()->boolean('include_archived');
+        $search = $request->validated('search');
+
+        if ($search) {
+            $workspaces = $this->service->searchWorkspaces(Auth::id(), $search);
+
+            return ApiResponse::success($workspaces, 'Search results retrieved successfully');
+        }
+
+        $includeArchived = $request->boolean('include_archived');
         $workspaces = $this->service->getWorkspaces(Auth::id(), $includeArchived);
 
         return ApiResponse::success($workspaces, 'Workspaces retrieved successfully');
