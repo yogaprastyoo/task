@@ -34,5 +34,5 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::apiResource('tasks', TaskController::class)->only(['show', 'update', 'destroy']);
-    Route::patch('/tasks/{id}/status', [TaskController::class, 'status']);
+    Route::patch('/tasks/{task}/status', [TaskController::class, 'status']);
 });

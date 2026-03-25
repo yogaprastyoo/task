@@ -69,9 +69,9 @@ class TaskController extends Controller
     /**
      * Update the status of the specified task.
      */
-    public function status(int $id, UpdateTaskStatusRequest $request): JsonResponse
+    public function status(int $task, UpdateTaskStatusRequest $request): JsonResponse
     {
-        $task = $this->service->updateTaskStatus(Auth::id(), $id, $request->validated('status'));
+        $task = $this->service->updateTaskStatus(Auth::id(), $task, $request->validated('status'));
 
         return ApiResponse::success($task, 'Task status updated successfully');
     }

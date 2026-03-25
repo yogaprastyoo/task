@@ -104,12 +104,14 @@ class TaskService
      */
     public function updateTaskStatus(int $userId, int $taskId, string $status): Task
     {
-        $task = $this->taskRepository->findOrFail($taskId);
+        return DB::transaction(function () use ($userId, $taskId, $status) {
+            $task = $this->taskRepository->findOrFail($taskId);
 
-        if ($task->creator_id !== $userId) {
-            throw new HttpException(403, 'You do not own this task.');
-        }
+            if ($task->creator_id !== $userId) {
+                throw new HttpException(403, 'You do not own this task.');
+            }
 
-        return $this->taskRepository->update($task, ['status' => $status]);
+            return $this->taskRepository->update($task, ['status' => $status]);
+        });
     }
 }

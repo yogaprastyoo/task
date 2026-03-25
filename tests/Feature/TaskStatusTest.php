@@ -2,7 +2,6 @@
 
 use App\Models\Task;
 use App\Models\User;
-use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
@@ -10,7 +9,6 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
-    $this->workspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
     Sanctum::actingAs($this->user);
 });
 
@@ -18,7 +16,6 @@ describe('PATCH /api/tasks/{id}/status', function () {
     it('can update task status to in_progress', function () {
         $task = Task::factory()->create([
             'creator_id' => $this->user->id,
-            'workspace_id' => $this->workspace->id,
             'status' => 'todo',
         ]);
 
