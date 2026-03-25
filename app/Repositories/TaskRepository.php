@@ -54,11 +54,19 @@ class TaskRepository
     /**
      * Get root tasks by workspace ID with their sub-tasks.
      */
-    public function findWithSubTasks(int $workspaceId): Collection
+    public function findRootTasksByWorkspace(int $workspaceId): Collection
     {
         return Task::with(['creator', 'children.creator'])
             ->where('workspace_id', $workspaceId)
             ->whereNull('parent_id')
             ->get();
+    }
+
+    /**
+     * Find a task with its children and parent hierarchy.
+     */
+    public function findWithSubTasks(int $taskId): Task
+    {
+        return Task::with(['children', 'parent', 'creator'])->findOrFail($taskId);
     }
 }

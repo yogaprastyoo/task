@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApiResponse;
+use App\Http\Requests\MoveTaskRequest;
+use App\Http\Requests\StoreSubTaskRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Requests\UpdateTaskStatusRequest;
@@ -75,5 +77,25 @@ class TaskController extends Controller
         $task = $this->service->updateTaskStatus(Auth::id(), $task, $request->validated('status'));
 
         return ApiResponse::success(new TaskResource($task), 'Task status updated successfully');
+    }
+
+    /**
+     * Create a sub-task under a parent task.
+     */
+    public function subtask($parentId, StoreSubTaskRequest $request): JsonResponse
+    {
+        $task = $this->service->createSubTask(Auth::id(), (int) $parentId, $request->validated());
+
+        return ApiResponse::success(new TaskResource($task), 'Sub-task created successfully', 201);
+    }
+
+    /**
+     * Move a task to a different parent.
+     */
+    public function move($taskId, MoveTaskRequest $request): JsonResponse
+    {
+        $task = $this->service->moveTask(Auth::id(), $taskId, $request->validated('parent_id'));
+
+        return ApiResponse::success(new TaskResource($task), 'Task moved successfully');
     }
 }

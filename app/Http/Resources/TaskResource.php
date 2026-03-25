@@ -20,6 +20,7 @@ class TaskResource extends JsonResource
             'description' => $this->description,
             'workspace_id' => $this->workspace_id,
             'creator' => new UserResource($this->whenLoaded('creator')),
+            'parent_id' => $this->parent_id,
             'parent' => new TaskResource($this->whenLoaded('parent')),
             'children' => TaskResource::collection($this->whenLoaded('children')),
             'status' => $this->status,

@@ -28,7 +28,7 @@ class TaskService
             throw new HttpException(403, 'You do not own this workspace.');
         }
 
-        return $this->taskRepository->findWithSubTasks($workspaceId);
+        return $this->taskRepository->findRootTasksByWorkspace($workspaceId);
     }
 
     /**
@@ -77,7 +77,11 @@ class TaskService
                 throw new HttpException(403, 'You do not own this task.');
             }
 
-            unset($data['workspace_id'], $data['creator_id'], $data['status']);
+            if (array_key_exists('workspace_id', $data)) {
+                throw new HttpException(422, 'Workspace cannot be changed after task creation.');
+            }
+
+            unset($data['workspace_id'], $data['creator_id'], $data['status'], $data['parent_id']);
 
             return $this->taskRepository->update($task, $data);
         });
@@ -112,6 +116,63 @@ class TaskService
             }
 
             return $this->taskRepository->update($task, ['status' => $status]);
+        });
+    }
+
+    /**
+     * Create a sub-task under a parent task.
+     */
+    public function createSubTask(int $userId, int $parentId, array $data): Task
+    {
+        return DB::transaction(function () use ($userId, $parentId, $data) {
+            $parent = $this->taskRepository->findOrFail($parentId);
+
+            if ($parent->creator_id !== $userId) {
+                throw new HttpException(403, 'You do not own this task.');
+            }
+
+            if ($parent->parent_id !== null) {
+                abort(422, 'Cannot create a sub-task under another sub-task. Maximum depth is 1 level.');
+            }
+
+            $data['parent_id'] = $parent->id;
+            $data['workspace_id'] = $parent->workspace_id;
+            $data['creator_id'] = $userId;
+            $data['status'] = TaskStatus::Todo->value;
+
+            return $this->taskRepository->create($data);
+        });
+    }
+
+    /**
+     * Move a task to a different parent within the same workspace.
+     */
+    public function moveTask(int $userId, int $taskId, ?int $parentId): Task
+    {
+        return DB::transaction(function () use ($userId, $taskId, $parentId) {
+            $task = $this->taskRepository->findOrFail($taskId);
+
+            if ($task->creator_id !== $userId) {
+                throw new HttpException(403, 'You do not own this task.');
+            }
+
+            if ($parentId !== null) {
+                $parent = $this->taskRepository->findOrFail($parentId);
+
+                if ($parent->workspace_id !== $task->workspace_id) {
+                    throw new HttpException(422, 'Parent task must be in the same workspace.');
+                }
+
+                if ($parent->parent_id !== null) {
+                    throw new HttpException(422, 'Cannot set a sub-task as parent. Maximum depth is 1 level.');
+                }
+
+                if ($task->children()->count() > 0) {
+                    throw new HttpException(422, 'Cannot convert a parent task with sub-tasks into a sub-task.');
+                }
+            }
+
+            return $this->taskRepository->update($task, ['parent_id' => $parentId]);
         });
     }
 }

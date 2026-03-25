@@ -132,7 +132,7 @@ describe('PUT /api/tasks/{id}', function () {
         ]);
     });
 
-    it('cannot update protected fields', function () {
+    it('cannot update protected fields like workspace_id', function () {
         $otherWorkspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
         $task = Task::factory()->create([
             'creator_id' => $this->user->id,
@@ -145,10 +145,8 @@ describe('PUT /api/tasks/{id}', function () {
             'status' => 'done',
         ]);
 
-        $response->assertStatus(200);
-        $task->refresh();
-        expect($task->workspace_id)->toBe($this->workspace->id);
-        expect($task->status)->toBe(TaskStatus::Todo);
+        $response->assertStatus(422)
+            ->assertJsonPath('message', 'Workspace cannot be changed after task creation.');
     });
 });
 

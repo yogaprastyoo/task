@@ -6,7 +6,7 @@ use App\Enums\TaskPriority;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
-class StoreTaskRequest extends FormRequest
+class StoreSubTaskRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -17,11 +17,22 @@ class StoreTaskRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'parent_id' => $this->route('task'),
+        ]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array
     {
         return [
+            'parent_id' => ['required', 'integer', 'exists:tasks,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'priority' => ['sometimes', new Enum(TaskPriority::class)],

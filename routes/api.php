@@ -62,7 +62,9 @@ Route::middleware('auth:sanctum')->group(function () {
         ->prefix('tasks')
         ->group(function () {
             // Member-level custom routes
+            Route::patch('/{task}/move', 'move');
             Route::patch('/{task}/status', 'status');
+            Route::post('/{task}/subtasks', 'subtask');
         });
 
     Route::apiResource('workspaces.tasks', TaskController::class)

@@ -31,12 +31,7 @@ class UpdateTaskRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'priority' => ['sometimes', new Enum(TaskPriority::class)],
             'due_date' => ['nullable', 'date', 'after_or_equal:now'],
-            'parent_id' => [
-                'nullable',
-                'integer',
-                'exists:tasks,id',
-                Rule::notIn([$taskId]),
-            ],
+            'workspace_id' => ['nullable'],
         ];
     }
 
