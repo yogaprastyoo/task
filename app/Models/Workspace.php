@@ -65,4 +65,12 @@ class Workspace extends Model
     {
         return $this->hasMany(Workspace::class, 'parent_id');
     }
+
+    /**
+     * Get the tasks for the workspace.
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
 }
