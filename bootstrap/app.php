@@ -2,6 +2,7 @@
 
 use App\Helpers\ApiResponse;
 use App\Http\Middleware\GuestApi;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -42,7 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 $statusCode = 500;
-                if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                if ($e instanceof AuthenticationException) {
                     return ApiResponse::error($e->getMessage(), 401);
                 } elseif ($e instanceof HttpExceptionInterface) {
                     $statusCode = $e->getStatusCode();

@@ -6,7 +6,6 @@ use App\Models\Workspace;
 use App\Repositories\WorkspaceRepository;
 use App\Services\WorkspaceService;
 use Exception;
-use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class WorkspaceServiceTest extends TestCase
