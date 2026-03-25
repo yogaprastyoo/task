@@ -21,7 +21,7 @@ describe('POST /api/workspaces/{workspaceId}/tasks', function () {
             'title' => 'New Task',
             'description' => 'Description',
             'priority' => 'high',
-            'due_date' => now()->addDays(2)->toDateString(),
+            'due_date' => now()->addDays(2)->toDateTimeString(),
         ]);
 
         $response->assertStatus(201)
@@ -52,7 +52,7 @@ describe('POST /api/workspaces/{workspaceId}/tasks', function () {
         $response = $this->postJson("/api/workspaces/{$this->workspace->id}/tasks", [
             'title' => '',
             'priority' => 'invalid_priority',
-            'due_date' => now()->subDay()->toDateString(),
+            'due_date' => now()->subDay()->toDateTimeString(),
         ]);
 
         $response->assertStatus(422)
@@ -61,17 +61,25 @@ describe('POST /api/workspaces/{workspaceId}/tasks', function () {
 });
 
 describe('GET /api/workspaces/{workspaceId}/tasks', function () {
-    it('can list tasks for a workspace', function () {
-        Task::factory()->count(3)->create([
+    it('can list tasks for a workspace as a nested tree', function () {
+        $parentTask = Task::factory()->create([
             'workspace_id' => $this->workspace->id,
             'creator_id' => $this->user->id,
+        ]);
+
+        $childTask = Task::factory()->create([
+            'workspace_id' => $this->workspace->id,
+            'creator_id' => $this->user->id,
+            'parent_id' => $parentTask->id,
         ]);
 
         $response = $this->getJson("/api/workspaces/{$this->workspace->id}/tasks");
 
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
-            ->assertJsonCount(3, 'data');
+            ->assertJsonCount(1, 'data') // Only the root task should appear at top level
+            ->assertJsonPath('data.0.id', $parentTask->id)
+            ->assertJsonPath('data.0.children.0.id', $childTask->id); // Subtask is nested
     });
 
     it('cannot list tasks for another user\'s workspace', function () {

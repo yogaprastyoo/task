@@ -20,7 +20,7 @@ return new class extends Migration
             $table->foreignId('parent_id')->nullable()->constrained('tasks')->cascadeOnDelete();
             $table->string('status')->default('todo');
             $table->string('priority')->default('medium');
-            $table->date('due_date')->nullable();
+            $table->dateTime('due_date')->nullable();
             $table->timestamps();
 
             $table->index('workspace_id');
