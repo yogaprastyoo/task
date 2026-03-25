@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ApiResponse;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
+use App\Http\Requests\UpdateTaskStatusRequest;
 use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -63,5 +64,15 @@ class TaskController extends Controller
         $this->service->deleteTask(Auth::id(), $id);
 
         return ApiResponse::success(null, 'Task deleted successfully');
+    }
+
+    /**
+     * Update the status of the specified task.
+     */
+    public function status(int $id, UpdateTaskStatusRequest $request): JsonResponse
+    {
+        $task = $this->service->updateTaskStatus(Auth::id(), $id, $request->validated('status'));
+
+        return ApiResponse::success($task, 'Task status updated successfully');
     }
 }

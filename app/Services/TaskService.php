@@ -98,4 +98,18 @@ class TaskService
             $this->taskRepository->delete($task);
         });
     }
+
+    /**
+     * Update task status with ownership validation.
+     */
+    public function updateTaskStatus(int $userId, int $taskId, string $status): Task
+    {
+        $task = $this->taskRepository->findOrFail($taskId);
+
+        if ($task->creator_id !== $userId) {
+            throw new HttpException(403, 'You do not own this task.');
+        }
+
+        return $this->taskRepository->update($task, ['status' => $status]);
+    }
 }
