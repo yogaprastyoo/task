@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Requests\UpdateTaskStatusRequest;
+use App\Http\Resources\TaskResource;
 use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +24,7 @@ class TaskController extends Controller
     {
         $tasks = $this->service->getTasksByWorkspace(Auth::id(), $workspaceId);
 
-        return ApiResponse::success($tasks, 'Tasks retrieved successfully');
+        return ApiResponse::success(TaskResource::collection($tasks), 'Tasks retrieved successfully');
     }
 
     /**
@@ -33,7 +34,7 @@ class TaskController extends Controller
     {
         $task = $this->service->createTask(Auth::id(), $workspaceId, $request->validated());
 
-        return ApiResponse::success($task, 'Task created successfully', 201);
+        return ApiResponse::success(new TaskResource($task), 'Task created successfully', 201);
     }
 
     /**
@@ -43,7 +44,7 @@ class TaskController extends Controller
     {
         $task = $this->service->findTask(Auth::id(), $id);
 
-        return ApiResponse::success($task, 'Task retrieved successfully');
+        return ApiResponse::success(new TaskResource($task), 'Task retrieved successfully');
     }
 
     /**
@@ -53,7 +54,7 @@ class TaskController extends Controller
     {
         $task = $this->service->updateTask(Auth::id(), $id, $request->validated());
 
-        return ApiResponse::success($task, 'Task updated successfully');
+        return ApiResponse::success(new TaskResource($task), 'Task updated successfully');
     }
 
     /**
@@ -73,6 +74,6 @@ class TaskController extends Controller
     {
         $task = $this->service->updateTaskStatus(Auth::id(), $task, $request->validated('status'));
 
-        return ApiResponse::success($task, 'Task status updated successfully');
+        return ApiResponse::success(new TaskResource($task), 'Task status updated successfully');
     }
 }
