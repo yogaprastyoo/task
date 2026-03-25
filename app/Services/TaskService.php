@@ -28,7 +28,7 @@ class TaskService
             throw new HttpException(403, 'You do not own this workspace.');
         }
 
-        return $this->taskRepository->findByWorkspace($workspaceId, ['creator', 'parent', 'children']);
+        return $this->taskRepository->findWithSubTasks($workspaceId);
     }
 
     /**
