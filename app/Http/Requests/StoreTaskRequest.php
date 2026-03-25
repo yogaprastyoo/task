@@ -25,8 +25,18 @@ class StoreTaskRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'priority' => ['sometimes', new Enum(TaskPriority::class)],
-            'due_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'due_date' => ['nullable', 'date', 'after_or_equal:now'],
             'parent_id' => ['nullable', 'integer', 'exists:tasks,id'],
+        ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     */
+    public function messages(): array
+    {
+        return [
+            'priority.'.Enum::class => 'Invalid priority. Allowed values: low, medium, high.',
         ];
     }
 }
