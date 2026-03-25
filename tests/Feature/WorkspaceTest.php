@@ -976,7 +976,7 @@ describe('Workspace Archiving and Settings (#41)', function () {
         Workspace::factory()->create(['owner_id' => $this->user->id, 'is_archived' => false]);
         Workspace::factory()->create(['owner_id' => $this->user->id, 'is_archived' => true]);
 
-        $response = $this->actingAs($this->user)->getJson('/api/workspaces?include_archived=true');
+        $response = $this->actingAs($this->user)->getJson('/api/workspaces?include_archived=1');
 
         $response->assertStatus(200)
             ->assertJsonCount(2, 'data');

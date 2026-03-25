@@ -22,17 +22,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/archived', [WorkspaceController::class, 'archived']);
     Route::apiResource('/workspaces', WorkspaceController::class);
 
-    Route::patch('/workspaces/{id}/move', [WorkspaceController::class, 'move']);
-    Route::patch('/workspaces/{id}/archive', [WorkspaceController::class, 'archive']);
-    Route::get('/workspaces/{id}/breadcrumbs', [WorkspaceController::class, 'breadcrumbs']);
+    Route::patch('/workspaces/{workspace}/move', [WorkspaceController::class, 'move']);
+    Route::patch('/workspaces/{workspace}/archive', [WorkspaceController::class, 'archive']);
+    Route::get('/workspaces/{workspace}/breadcrumbs', [WorkspaceController::class, 'breadcrumbs']);
     Route::post('/workspaces/{workspace}/restore', [WorkspaceController::class, 'restore'])->withTrashed();
 
     // Task Routes
-    Route::prefix('workspaces/{workspaceId}')->group(function () {
-        Route::get('/tasks', [TaskController::class, 'index']);
-        Route::post('/tasks', [TaskController::class, 'store']);
-    });
-
-    Route::apiResource('tasks', TaskController::class)->only(['show', 'update', 'destroy']);
+    Route::apiResource('workspaces.tasks', TaskController::class)
+        ->shallow()
+        ->only(['index', 'store', 'show', 'update', 'destroy']);
+        
     Route::patch('/tasks/{task}/status', [TaskController::class, 'status']);
 });

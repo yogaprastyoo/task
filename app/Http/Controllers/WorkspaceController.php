@@ -81,29 +81,29 @@ class WorkspaceController extends Controller
     /**
      * Update the specified workspace in storage.
      */
-    public function update(int $id, UpdateWorkspaceRequest $request): JsonResponse
+    public function update(int $workspace, UpdateWorkspaceRequest $request): JsonResponse
     {
-        $workspace = $this->service->updateWorkspace(Auth::id(), $id, $request->validated());
+        $workspaceModel = $this->service->updateWorkspace(Auth::id(), $workspace, $request->validated());
 
-        return ApiResponse::success($workspace, 'Workspace updated successfully');
+        return ApiResponse::success($workspaceModel, 'Workspace updated successfully');
     }
 
     /**
      * Display the specified workspace.
      */
-    public function show(int $id): JsonResponse
+    public function show(int $workspace): JsonResponse
     {
-        $workspace = $this->service->findWorkspace(Auth::id(), $id);
+        $workspaceModel = $this->service->findWorkspace(Auth::id(), $workspace);
 
-        return ApiResponse::success($workspace, 'Workspace retrieved successfully');
+        return ApiResponse::success($workspaceModel, 'Workspace retrieved successfully');
     }
 
     /**
      * Remove the specified workspace from storage.
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(int $workspace): JsonResponse
     {
-        $this->service->deleteWorkspace(Auth::id(), $id);
+        $this->service->deleteWorkspace(Auth::id(), $workspace);
 
         return ApiResponse::success(null, 'Workspace deleted successfully');
     }
@@ -111,15 +111,15 @@ class WorkspaceController extends Controller
     /**
      * Move the specified workspace to a new parent.
      */
-    public function move(MoveWorkspaceRequest $request, int $id): JsonResponse
+    public function move(MoveWorkspaceRequest $request, int $workspace): JsonResponse
     {
-        $workspace = $this->service->moveWorkspace(
+        $workspaceModel = $this->service->moveWorkspace(
             Auth::id(),
-            $id,
+            $workspace,
             $request->validated('parent_id')
         );
 
-        return ApiResponse::success($workspace, 'Workspace moved successfully');
+        return ApiResponse::success($workspaceModel, 'Workspace moved successfully');
     }
 
     /**
@@ -135,20 +135,20 @@ class WorkspaceController extends Controller
     /**
      * Toggle archive status of a workspace.
      */
-    public function archive(int $id): JsonResponse
+    public function archive(int $workspace): JsonResponse
     {
-        $workspace = $this->service->archiveWorkspace(Auth::id(), $id);
-        $status = $workspace->is_archived ? 'archived' : 'unarchived';
+        $workspaceModel = $this->service->archiveWorkspace(Auth::id(), $workspace);
+        $status = $workspaceModel->is_archived ? 'archived' : 'unarchived';
 
-        return ApiResponse::success($workspace, "Workspace {$status} successfully");
+        return ApiResponse::success($workspaceModel, "Workspace {$status} successfully");
     }
 
     /**
      * Get breadcrumbs (ancestor path) for a specific workspace.
      */
-    public function breadcrumbs(int $id): JsonResponse
+    public function breadcrumbs(int $workspace): JsonResponse
     {
-        $breadcrumbs = $this->service->getBreadcrumbs(Auth::id(), $id);
+        $breadcrumbs = $this->service->getBreadcrumbs(Auth::id(), $workspace);
 
         return ApiResponse::success($breadcrumbs, 'Breadcrumbs retrieved successfully');
     }

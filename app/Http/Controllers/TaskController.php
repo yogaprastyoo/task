@@ -20,9 +20,9 @@ class TaskController extends Controller
     /**
      * Display a listing of tasks for a workspace.
      */
-    public function index(int $workspaceId): JsonResponse
+    public function index(int $workspace): JsonResponse
     {
-        $tasks = $this->service->getTasksByWorkspace(Auth::id(), $workspaceId);
+        $tasks = $this->service->getTasksByWorkspace(Auth::id(), $workspace);
 
         return ApiResponse::success(TaskResource::collection($tasks), 'Tasks retrieved successfully');
     }
@@ -30,39 +30,39 @@ class TaskController extends Controller
     /**
      * Store a newly created task.
      */
-    public function store(int $workspaceId, StoreTaskRequest $request): JsonResponse
+    public function store(int $workspace, StoreTaskRequest $request): JsonResponse
     {
-        $task = $this->service->createTask(Auth::id(), $workspaceId, $request->validated());
+        $taskModel = $this->service->createTask(Auth::id(), $workspace, $request->validated());
 
-        return ApiResponse::success(new TaskResource($task), 'Task created successfully', 201);
+        return ApiResponse::success(new TaskResource($taskModel), 'Task created successfully', 201);
     }
 
     /**
      * Display the specified task.
      */
-    public function show(int $id): JsonResponse
+    public function show(int $task): JsonResponse
     {
-        $task = $this->service->findTask(Auth::id(), $id);
+        $taskModel = $this->service->findTask(Auth::id(), $task);
 
-        return ApiResponse::success(new TaskResource($task), 'Task retrieved successfully');
+        return ApiResponse::success(new TaskResource($taskModel), 'Task retrieved successfully');
     }
 
     /**
      * Update the specified task.
      */
-    public function update(int $id, UpdateTaskRequest $request): JsonResponse
+    public function update(int $task, UpdateTaskRequest $request): JsonResponse
     {
-        $task = $this->service->updateTask(Auth::id(), $id, $request->validated());
+        $taskModel = $this->service->updateTask(Auth::id(), $task, $request->validated());
 
-        return ApiResponse::success(new TaskResource($task), 'Task updated successfully');
+        return ApiResponse::success(new TaskResource($taskModel), 'Task updated successfully');
     }
 
     /**
      * Remove the specified task.
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(int $task): JsonResponse
     {
-        $this->service->deleteTask(Auth::id(), $id);
+        $this->service->deleteTask(Auth::id(), $task);
 
         return ApiResponse::success(null, 'Task deleted successfully');
     }

@@ -42,7 +42,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 $statusCode = 500;
-                if ($e instanceof HttpExceptionInterface) {
+                if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                    return ApiResponse::error($e->getMessage(), 401);
+                } elseif ($e instanceof HttpExceptionInterface) {
                     $statusCode = $e->getStatusCode();
                 } elseif ($e->getCode() >= 400 && $e->getCode() <= 599) {
                     $statusCode = $e->getCode();
