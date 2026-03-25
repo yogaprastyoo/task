@@ -2,6 +2,7 @@
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -26,4 +27,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workspaces/{id}/breadcrumbs', [WorkspaceController::class, 'breadcrumbs']);
     Route::post('/workspaces/{workspace}/restore', [WorkspaceController::class, 'restore'])->withTrashed();
 
+    // Task Routes
+    Route::prefix('workspaces/{workspaceId}')->group(function () {
+        Route::get('/tasks', [TaskController::class, 'index']);
+        Route::post('/tasks', [TaskController::class, 'store']);
+    });
+
+    Route::apiResource('tasks', TaskController::class)->only(['show', 'update', 'destroy']);
 });
