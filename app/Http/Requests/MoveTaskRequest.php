@@ -2,11 +2,11 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\TaskPriority;
+use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rule;
 
-class StoreTaskRequest extends FormRequest
+class MoveTaskRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -21,11 +21,16 @@ class StoreTaskRequest extends FormRequest
      */
     public function rules(): array
     {
+        $task = $this->route('task');
+        $taskId = $task instanceof Task ? $task->id : $task;
+
         return [
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'priority' => ['sometimes', new Enum(TaskPriority::class)],
-            'due_date' => ['nullable', 'date', 'after_or_equal:now'],
+            'parent_id' => [
+                'nullable',
+                'integer',
+                'exists:tasks,id',
+                Rule::notIn([$taskId]),
+            ],
         ];
     }
 
@@ -35,7 +40,7 @@ class StoreTaskRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'priority.'.Enum::class => 'Invalid priority. Allowed values: low, medium, high.',
+            'parent_id.not_in' => 'Cannot move a task to itself.',
         ];
     }
 }
