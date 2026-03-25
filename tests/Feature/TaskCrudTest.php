@@ -146,7 +146,8 @@ describe('PUT /api/tasks/{id}', function () {
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonPath('message', 'Workspace cannot be changed after task creation.');
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['errors' => ['workspace_id']]);
     });
 });
 

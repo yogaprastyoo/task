@@ -132,7 +132,7 @@ class TaskService
             }
 
             if ($parent->parent_id !== null) {
-                abort(422, 'Cannot create a sub-task under another sub-task. Maximum depth is 1 level.');
+                throw new HttpException(422, 'Cannot create a sub-task under another sub-task. Maximum depth is 1 level.');
             }
 
             $data['parent_id'] = $parent->id;

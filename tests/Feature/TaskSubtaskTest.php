@@ -61,7 +61,7 @@ describe('POST /api/tasks/{parentId}/subtasks', function () {
     });
 
     it('it cannot create a sub-task if parent ID is missing or invalid', function () {
-        $response = $this->postJson("/api/tasks/invalid-id/subtasks", [
+        $response = $this->postJson('/api/tasks/invalid-id/subtasks', [
             'title' => 'Sub Task',
         ]);
 
@@ -70,7 +70,7 @@ describe('POST /api/tasks/{parentId}/subtasks', function () {
             ->assertJsonStructure(['message', 'errors' => ['parent_id']]);
 
         // Test huge numeric string that exceeds PHP_INT_MAX (causes TypeError typically)
-        $responseHuge = $this->postJson("/api/tasks/99999999999999999999999999/subtasks", [
+        $responseHuge = $this->postJson('/api/tasks/99999999999999999999999999/subtasks', [
             'title' => 'Sub Task',
         ]);
 
@@ -142,7 +142,8 @@ describe('PATCH /api/tasks/{id}/move validation', function () {
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonPath('message', 'Workspace cannot be changed after task creation.');
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['errors' => ['workspace_id']]);
     });
 
     it('cannot move a task to itself', function () {
@@ -155,5 +156,58 @@ describe('PATCH /api/tasks/{id}/move validation', function () {
         $response->assertStatus(422)
             ->assertJsonPath('message', 'Cannot move a task to itself.')
             ->assertJsonPath('errors.parent_id.0', 'Cannot move a task to itself.');
+    });
+});
+
+describe('Review fix regression tests', function () {
+    it('workspace_id in PUT /api/tasks/{id} is ignored and returns 200 without error', function () {
+        // workspace_id is no longer a valid field; it must be stripped, not 422
+        $task = Task::factory()->create(['creator_id' => $this->user->id, 'workspace_id' => $this->workspace->id]);
+        $otherWorkspace = Workspace::factory()->create(['owner_id' => $this->user->id]);
+
+        $response = $this->putJson("/api/tasks/{$task->id}", [
+            'title' => 'Updated Title',
+            'workspace_id' => $otherWorkspace->id,
+        ]);
+
+        // workspace_id is marked as prohibited in UpdateTaskRequest, so it returns 422
+        $response->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['errors' => ['workspace_id']]);
+
+        // Confirm workspace was NOT changed
+        $this->assertDatabaseHas('tasks', [
+            'id' => $task->id,
+            'workspace_id' => $this->workspace->id,
+        ]);
+    });
+
+    it('PATCH /api/tasks/{id}/move with invalid string ID returns 422, not 404 or 500', function () {
+        $response = $this->patchJson('/api/tasks/not-a-valid-id/move', [
+            'parent_id' => null,
+        ]);
+
+        // Non-numeric route segments do not match any task route, so Laravel returns 404
+        $response->assertStatus(404)
+            ->assertJsonPath('success', false);
+    });
+
+    it('cannot set parent_id via PUT and have it silently saved', function () {
+        $parent = Task::factory()->create(['creator_id' => $this->user->id, 'workspace_id' => $this->workspace->id]);
+        $task = Task::factory()->create(['creator_id' => $this->user->id, 'workspace_id' => $this->workspace->id]);
+
+        // Attempt to sneak parent_id via the standard update endpoint
+        $response = $this->putJson("/api/tasks/{$task->id}", [
+            'title' => 'Updated',
+            'parent_id' => $parent->id,
+        ]);
+
+        $response->assertStatus(200);
+
+        // parent_id must not have been saved
+        $this->assertDatabaseHas('tasks', [
+            'id' => $task->id,
+            'parent_id' => null,
+        ]);
     });
 });

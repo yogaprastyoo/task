@@ -61,12 +61,4 @@ class TaskRepository
             ->whereNull('parent_id')
             ->get();
     }
-
-    /**
-     * Find a task with its children and parent hierarchy.
-     */
-    public function findWithSubTasks(int $taskId): Task
-    {
-        return Task::with(['children', 'parent', 'creator'])->findOrFail($taskId);
-    }
 }

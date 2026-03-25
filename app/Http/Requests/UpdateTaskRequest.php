@@ -3,9 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\TaskPriority;
-use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class UpdateTaskRequest extends FormRequest
@@ -23,15 +21,12 @@ class UpdateTaskRequest extends FormRequest
      */
     public function rules(): array
     {
-        $task = $this->route('task');
-        $taskId = $task instanceof Task ? $task->id : $task;
-
         return [
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'priority' => ['sometimes', new Enum(TaskPriority::class)],
             'due_date' => ['nullable', 'date', 'after_or_equal:now'],
-            'workspace_id' => ['nullable'],
+            'workspace_id' => ['prohibited'],
         ];
     }
 

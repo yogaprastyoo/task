@@ -94,7 +94,7 @@ class TaskController extends Controller
      */
     public function move($taskId, MoveTaskRequest $request): JsonResponse
     {
-        $task = $this->service->moveTask(Auth::id(), $taskId, $request->validated('parent_id'));
+        $task = $this->service->moveTask(Auth::id(), (int) $taskId, $request->validated('parent_id'));
 
         return ApiResponse::success(new TaskResource($task), 'Task moved successfully');
     }
