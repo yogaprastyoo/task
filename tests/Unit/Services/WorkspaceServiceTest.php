@@ -6,7 +6,6 @@ use App\Models\Workspace;
 use App\Repositories\WorkspaceRepository;
 use App\Services\WorkspaceService;
 use Exception;
-use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class WorkspaceServiceTest extends TestCase
@@ -24,7 +23,6 @@ class WorkspaceServiceTest extends TestCase
 
     public function test_it_calculates_depth_one_for_root_workspaces(): void
     {
-        Auth::shouldReceive('id')->once()->andReturn(1);
 
         $this->repository->expects($this->once())
             ->method('findByNameAndParent')
@@ -38,12 +36,11 @@ class WorkspaceServiceTest extends TestCase
             }))
             ->willReturn(new Workspace);
 
-        $this->service->createWorkspace(['name' => 'Root']);
+        $this->service->createWorkspace(1, ['name' => 'Root']);
     }
 
     public function test_it_calculates_depth_two_for_child_of_root(): void
     {
-        Auth::shouldReceive('id')->andReturn(1);
 
         $parent = new Workspace;
         $parent->id = 10;
@@ -60,12 +57,11 @@ class WorkspaceServiceTest extends TestCase
             }))
             ->willReturn(new Workspace);
 
-        $this->service->createWorkspace(['name' => 'Level 2', 'parent_id' => 10]);
+        $this->service->createWorkspace(1, ['name' => 'Level 2', 'parent_id' => 10]);
     }
 
     public function test_it_throws_exception_when_depth_exceeds_three(): void
     {
-        Auth::shouldReceive('id')->andReturn(1);
 
         $parent = new Workspace;
         $parent->id = 20;
@@ -77,12 +73,11 @@ class WorkspaceServiceTest extends TestCase
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Maximum workspace depth of 3 reached.');
 
-        $this->service->createWorkspace(['name' => 'Level 4', 'parent_id' => 20]);
+        $this->service->createWorkspace(1, ['name' => 'Level 4', 'parent_id' => 20]);
     }
 
     public function test_it_throws_exception_when_parent_belongs_to_another_user(): void
     {
-        Auth::shouldReceive('id')->andReturn(1);
 
         $parent = new Workspace;
         $parent->id = 30;
@@ -94,6 +89,6 @@ class WorkspaceServiceTest extends TestCase
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Parent workspace does not belong to you.');
 
-        $this->service->createWorkspace(['name' => 'Stolen Parent', 'parent_id' => 30]);
+        $this->service->createWorkspace(1, ['name' => 'Stolen Parent', 'parent_id' => 30]);
     }
 }

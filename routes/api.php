@@ -7,32 +7,65 @@ use App\Http\Controllers\WorkspaceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('guest.api')->group(function () {
-    Route::post('/auth/register', [AuthController::class, 'register']);
-    Route::post('/auth/login', [AuthController::class, 'login']);
-});
+/*
+|--------------------------------------------------------------------------
+| Auth Routes (Guest Only)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('guest.api')
+    ->controller(AuthController::class)
+    ->prefix('auth')
+    ->group(function () {
+        Route::post('/register', 'register');
+        Route::post('/login', 'login');
+    });
 
+/*
+|--------------------------------------------------------------------------
+| Authenticated Routes
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth:sanctum')->group(function () {
+
     Route::get('/user', function (Request $request) {
         return ApiResponse::success($request->user(), 'Authenticated user');
     });
 
-    Route::get('/workspaces/root', [WorkspaceController::class, 'root']);
-    Route::get('/workspaces/trash', [WorkspaceController::class, 'trash']);
-    Route::get('/workspaces/archived', [WorkspaceController::class, 'archived']);
-    Route::apiResource('/workspaces', WorkspaceController::class);
+    /*
+    |------------------------------------------------------------------
+    | Workspace Routes
+    |------------------------------------------------------------------
+    */
+    Route::controller(WorkspaceController::class)
+        ->prefix('workspaces')
+        ->group(function () {
+            // Collection-level custom routes
+            Route::get('/root', 'root');
+            Route::get('/trash', 'trash');
+            Route::get('/archived', 'archived');
 
-    Route::patch('/workspaces/{id}/move', [WorkspaceController::class, 'move']);
-    Route::patch('/workspaces/{id}/archive', [WorkspaceController::class, 'archive']);
-    Route::get('/workspaces/{id}/breadcrumbs', [WorkspaceController::class, 'breadcrumbs']);
-    Route::post('/workspaces/{workspace}/restore', [WorkspaceController::class, 'restore'])->withTrashed();
+            // Member-level custom routes
+            Route::patch('/{workspace}/move', 'move');
+            Route::patch('/{workspace}/archive', 'archive');
+            Route::get('/{workspace}/breadcrumbs', 'breadcrumbs');
+            Route::post('/{workspace}/restore', 'restore')->withTrashed();
+        });
 
-    // Task Routes
-    Route::prefix('workspaces/{workspaceId}')->group(function () {
-        Route::get('/tasks', [TaskController::class, 'index']);
-        Route::post('/tasks', [TaskController::class, 'store']);
-    });
+    Route::apiResource('workspaces', WorkspaceController::class);
 
-    Route::apiResource('tasks', TaskController::class)->only(['show', 'update', 'destroy']);
-    Route::patch('/tasks/{task}/status', [TaskController::class, 'status']);
+    /*
+    |------------------------------------------------------------------
+    | Task Routes
+    |------------------------------------------------------------------
+    */
+    Route::controller(TaskController::class)
+        ->prefix('tasks')
+        ->group(function () {
+            // Member-level custom routes
+            Route::patch('/{task}/status', 'status');
+        });
+
+    Route::apiResource('workspaces.tasks', TaskController::class)
+        ->shallow()
+        ->only(['index', 'store', 'show', 'update', 'destroy']);
 });
