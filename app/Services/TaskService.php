@@ -52,7 +52,7 @@ class TaskService
     }
 
     /**
-     * find a single task with ownership validation.
+     * Find a single task with ownership validation.
      */
     public function findTask(int $userId, int $taskId): Task
     {
@@ -77,7 +77,6 @@ class TaskService
                 throw new HttpException(403, 'You do not own this task.');
             }
 
-            // Exclude protected fields
             unset($data['workspace_id'], $data['creator_id'], $data['status']);
 
             return $this->taskRepository->update($task, $data);

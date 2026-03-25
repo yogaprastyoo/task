@@ -163,3 +163,25 @@ describe('DELETE /api/tasks/{id}', function () {
         $response->assertStatus(403);
     });
 });
+
+describe('404 Not Found edge cases', function () {
+    it('returns 404 when task does not exist', function () {
+        $response = $this->getJson('/api/tasks/99999');
+
+        $response->assertStatus(404);
+    });
+
+    it('returns 404 when workspace does not exist on task creation', function () {
+        $response = $this->postJson('/api/workspaces/99999/tasks', [
+            'title' => 'Task for non-existent workspace',
+        ]);
+
+        $response->assertStatus(404);
+    });
+
+    it('returns 404 when workspace does not exist on task listing', function () {
+        $response = $this->getJson('/api/workspaces/99999/tasks');
+
+        $response->assertStatus(404);
+    });
+});
