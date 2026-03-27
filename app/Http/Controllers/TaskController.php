@@ -82,9 +82,9 @@ class TaskController extends Controller
     /**
      * Create a sub-task under a parent task.
      */
-    public function subtask($parentId, StoreSubTaskRequest $request): JsonResponse
+    public function subtask(int $parentId, StoreSubTaskRequest $request): JsonResponse
     {
-        $task = $this->service->createSubTask(Auth::id(), (int) $parentId, $request->validated());
+        $task = $this->service->createSubTask(Auth::id(), $parentId, $request->validated());
 
         return ApiResponse::success(new TaskResource($task), 'Sub-task created successfully', 201);
     }
@@ -92,9 +92,9 @@ class TaskController extends Controller
     /**
      * Move a task to a different parent.
      */
-    public function move($taskId, MoveTaskRequest $request): JsonResponse
+    public function move(int $taskId, MoveTaskRequest $request): JsonResponse
     {
-        $task = $this->service->moveTask(Auth::id(), (int) $taskId, $request->validated('parent_id'));
+        $task = $this->service->moveTask(Auth::id(), $taskId, $request->validated('parent_id'));
 
         return ApiResponse::success(new TaskResource($task), 'Task moved successfully');
     }

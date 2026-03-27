@@ -42,6 +42,10 @@ return Application::configure(basePath: dirname(__DIR__))
                     return ApiResponse::error('Resource not found.', 404);
                 }
 
+                if ($e instanceof TypeError) {
+                    return ApiResponse::error('Resource not found.', 404);
+                }
+
                 $statusCode = 500;
                 if ($e instanceof AuthenticationException) {
                     return ApiResponse::error($e->getMessage(), 401);
