@@ -26,6 +26,7 @@ Route::middleware('guest.api')
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     Route::get('/user', function (Request $request) {
         return ApiResponse::success($request->user(), 'Authenticated user');

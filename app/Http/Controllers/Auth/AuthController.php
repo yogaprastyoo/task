@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\StoreRegisterRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
@@ -38,5 +39,15 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         return ApiResponse::success(null, 'Login successful');
+    }
+
+    /**
+     * Handle the user logout request.
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        $this->authService->logout($request);
+
+        return ApiResponse::success(null, 'Logout successful');
     }
 }
