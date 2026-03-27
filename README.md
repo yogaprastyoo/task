@@ -39,6 +39,7 @@ A professional, RESTful API built with Laravel 13 designed for hierarchical work
 - PHP 8.3 or higher
 - Composer
 - Node.js & NPM
+- Supported database engine (MySQL, PostgreSQL, SQLite, etc.)
 
 ### Installation
 
@@ -60,9 +61,8 @@ A professional, RESTful API built with Laravel 13 designed for hierarchical work
    php artisan key:generate
    ```
 
-4. Set up the database:
+4. Configure your database in the `.env` file and run migrations:
    ```bash
-   touch database/database.sqlite
    php artisan migrate --seed
    ```
 
