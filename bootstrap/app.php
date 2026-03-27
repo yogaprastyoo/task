@@ -42,14 +42,17 @@ return Application::configure(basePath: dirname(__DIR__))
                     return ApiResponse::error('Resource not found.', 404);
                 }
 
-                $statusCode = 500;
+                if ($e instanceof TypeError && str_contains($e->getMessage(), 'must be of type int, string given')) {
+                    return ApiResponse::error('Resource not found.', 404);
+                }
+
                 if ($e instanceof AuthenticationException) {
                     return ApiResponse::error($e->getMessage(), 401);
-                } elseif ($e instanceof HttpExceptionInterface) {
-                    $statusCode = $e->getStatusCode();
-                } elseif ($e->getCode() >= 400 && $e->getCode() <= 599) {
-                    $statusCode = $e->getCode();
                 }
+
+                $statusCode = $e instanceof HttpExceptionInterface
+                    ? $e->getStatusCode()
+                    : 500;
 
                 return ApiResponse::error(
                     $e->getMessage(),

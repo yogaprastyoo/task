@@ -48,7 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('/{workspace}/move', 'move');
             Route::patch('/{workspace}/archive', 'archive');
             Route::get('/{workspace}/breadcrumbs', 'breadcrumbs');
-            Route::post('/{workspace}/restore', 'restore')->withTrashed();
+            Route::post('/{workspace}/restore', 'restore');
         });
 
     Route::apiResource('workspaces', WorkspaceController::class);

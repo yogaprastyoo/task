@@ -7,9 +7,9 @@ use App\Http\Requests\MoveWorkspaceRequest;
 use App\Http\Requests\SearchWorkspaceRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
-use App\Models\Workspace;
 use App\Services\WorkspaceService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class WorkspaceController extends Controller
@@ -60,9 +60,9 @@ class WorkspaceController extends Controller
     /**
      * Display a listing of root workspaces (parent_id is null).
      */
-    public function root(): JsonResponse
+    public function root(Request $request): JsonResponse
     {
-        $includeArchived = request()->boolean('include_archived');
+        $includeArchived = $request->boolean('include_archived');
         $workspaces = $this->service->getRootWorkspaces(Auth::id(), $includeArchived);
 
         return ApiResponse::success($workspaces, 'Root workspaces retrieved successfully');
@@ -125,9 +125,9 @@ class WorkspaceController extends Controller
     /**
      * Restore a soft-deleted workspace.
      */
-    public function restore(Workspace $workspace): JsonResponse
+    public function restore(int $workspace): JsonResponse
     {
-        $workspace = $this->service->restoreWorkspace(Auth::id(), $workspace->id);
+        $workspace = $this->service->restoreWorkspace(Auth::id(), $workspace);
 
         return ApiResponse::success($workspace, 'Workspace restored successfully');
     }

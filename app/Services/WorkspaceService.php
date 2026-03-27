@@ -4,9 +4,10 @@ namespace App\Services;
 
 use App\Models\Workspace;
 use App\Repositories\WorkspaceRepository;
-use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class WorkspaceService
 {
@@ -46,7 +47,7 @@ class WorkspaceService
         $workspace = $this->repository->findOrFail($id);
 
         if ($workspace->owner_id !== $userId) {
-            throw new Exception('Unauthorized to access this workspace.', 403);
+            throw new HttpException(403, 'Unauthorized to access this workspace.');
         }
 
         // Eager load child workspaces and their count
@@ -66,7 +67,7 @@ class WorkspaceService
         $workspace = $this->repository->findOrFail($id);
 
         if ($workspace->owner_id !== $userId) {
-            throw new Exception('Unauthorized to access this workspace.', 403);
+            throw new HttpException(403, 'Unauthorized to access this workspace.');
         }
 
         return $this->repository->getAncestors($workspace);
@@ -84,7 +85,7 @@ class WorkspaceService
             $parent = $this->repository->findOrFail($parentId);
 
             if ($parent->owner_id !== $userId) {
-                throw new Exception('Parent workspace does not belong to you.', 403);
+                throw new HttpException(403, 'Parent workspace does not belong to you.');
             }
 
             $depth = $parent->depth + 1;
@@ -130,7 +131,7 @@ class WorkspaceService
         $workspace = $this->repository->findOrFail($id);
 
         if ($workspace->owner_id !== $userId) {
-            throw new Exception('Unauthorized to update this workspace.', 403);
+            throw new HttpException(403, 'Unauthorized to update this workspace.');
         }
 
         $updateData = [];
@@ -179,7 +180,7 @@ class WorkspaceService
         $workspace = $this->repository->findOrFail($id);
 
         if ($workspace->owner_id !== $userId) {
-            throw new Exception('Unauthorized to archive this workspace.', 403);
+            throw new HttpException(403, 'Unauthorized to archive this workspace.');
         }
 
         $newStatus = ! $workspace->is_archived;
@@ -230,7 +231,7 @@ class WorkspaceService
         $workspace = $this->repository->findOrFail($id);
 
         if ($workspace->owner_id !== $userId) {
-            throw new Exception('Unauthorized to delete this workspace.', 403);
+            throw new HttpException(403, 'Unauthorized to delete this workspace.');
         }
 
         $this->performRecursiveDelete($workspace);
@@ -259,7 +260,7 @@ class WorkspaceService
         $workspace = $this->repository->findOrFail($id);
 
         if ($workspace->owner_id !== $userId) {
-            throw new Exception('Unauthorized to move this workspace.', 403);
+            throw new HttpException(403, 'Unauthorized to move this workspace.');
         }
 
         $newDepth = 1;
@@ -274,7 +275,7 @@ class WorkspaceService
             $parent = $this->repository->findOrFail($parentId);
 
             if ($parent->owner_id !== $userId) {
-                throw new Exception('Parent workspace does not belong to you.', 403);
+                throw new HttpException(403, 'Parent workspace does not belong to you.');
             }
 
             if ($this->repository->isDescendant($id, $parent)) {
@@ -327,11 +328,11 @@ class WorkspaceService
         $workspace = $this->repository->findWithTrashed($id);
 
         if (! $workspace->trashed()) {
-            abort(404, 'Workspace not found in trash.');
+            throw new NotFoundHttpException('Workspace not found in trash.');
         }
 
         if ($workspace->owner_id !== $userId) {
-            abort(403, 'Unauthorized to restore this workspace.');
+            throw new HttpException(403, 'Unauthorized to restore this workspace.');
         }
 
         if ($this->repository->findByNameAndParent($userId, $workspace->parent_id, $workspace->name)) {
