@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Repositories\UserRepository;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -40,5 +41,16 @@ class AuthService
         Auth::login($user);
 
         return $user;
+    }
+
+    /**
+     * Log out the authenticated user.
+     */
+    public function logout(Request $request): void
+    {
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
     }
 }
