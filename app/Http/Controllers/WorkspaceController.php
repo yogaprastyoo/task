@@ -7,6 +7,7 @@ use App\Http\Requests\MoveWorkspaceRequest;
 use App\Http\Requests\SearchWorkspaceRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
+use App\Http\Resources\WorkspaceResource;
 use App\Services\WorkspaceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class WorkspaceController extends Controller
     {
         $workspaces = $this->service->getTrashedWorkspaces(Auth::id());
 
-        return ApiResponse::success($workspaces, 'Trashed workspaces retrieved successfully');
+        return ApiResponse::success(WorkspaceResource::collection($workspaces), 'Trashed workspaces retrieved successfully');
     }
 
     /**
@@ -35,7 +36,7 @@ class WorkspaceController extends Controller
     {
         $archived = $this->service->getArchivedWorkspaces(Auth::id());
 
-        return ApiResponse::success($archived, 'Archived workspaces retrieved successfully');
+        return ApiResponse::success(WorkspaceResource::collection($archived), 'Archived workspaces retrieved successfully');
     }
 
     /**
@@ -48,13 +49,13 @@ class WorkspaceController extends Controller
         if ($search) {
             $workspaces = $this->service->searchWorkspaces(Auth::id(), $search);
 
-            return ApiResponse::success($workspaces, 'Search results retrieved successfully');
+            return ApiResponse::success(WorkspaceResource::collection($workspaces), 'Search results retrieved successfully');
         }
 
         $includeArchived = $request->boolean('include_archived');
         $workspaces = $this->service->getWorkspaces(Auth::id(), $includeArchived);
 
-        return ApiResponse::success($workspaces, 'Workspaces retrieved successfully');
+        return ApiResponse::success(WorkspaceResource::collection($workspaces), 'Workspaces retrieved successfully');
     }
 
     /**
@@ -65,7 +66,7 @@ class WorkspaceController extends Controller
         $includeArchived = $request->boolean('include_archived');
         $workspaces = $this->service->getRootWorkspaces(Auth::id(), $includeArchived);
 
-        return ApiResponse::success($workspaces, 'Root workspaces retrieved successfully');
+        return ApiResponse::success(WorkspaceResource::collection($workspaces), 'Root workspaces retrieved successfully');
     }
 
     /**
@@ -75,7 +76,7 @@ class WorkspaceController extends Controller
     {
         $workspace = $this->service->createWorkspace(Auth::id(), $request->validated());
 
-        return ApiResponse::success($workspace, 'Workspace created successfully', 201);
+        return ApiResponse::success(new WorkspaceResource($workspace), 'Workspace created successfully', 201);
     }
 
     /**
@@ -85,7 +86,7 @@ class WorkspaceController extends Controller
     {
         $workspaceModel = $this->service->updateWorkspace(Auth::id(), $workspace, $request->validated());
 
-        return ApiResponse::success($workspaceModel, 'Workspace updated successfully');
+        return ApiResponse::success(new WorkspaceResource($workspaceModel), 'Workspace updated successfully');
     }
 
     /**
@@ -95,7 +96,7 @@ class WorkspaceController extends Controller
     {
         $workspaceModel = $this->service->findWorkspace(Auth::id(), $workspace);
 
-        return ApiResponse::success($workspaceModel, 'Workspace retrieved successfully');
+        return ApiResponse::success(new WorkspaceResource($workspaceModel), 'Workspace retrieved successfully');
     }
 
     /**
@@ -119,7 +120,7 @@ class WorkspaceController extends Controller
             $request->validated('parent_id')
         );
 
-        return ApiResponse::success($workspaceModel, 'Workspace moved successfully');
+        return ApiResponse::success(new WorkspaceResource($workspaceModel), 'Workspace moved successfully');
     }
 
     /**
@@ -129,7 +130,7 @@ class WorkspaceController extends Controller
     {
         $workspace = $this->service->restoreWorkspace(Auth::id(), $workspace);
 
-        return ApiResponse::success($workspace, 'Workspace restored successfully');
+        return ApiResponse::success(new WorkspaceResource($workspace), 'Workspace restored successfully');
     }
 
     /**
@@ -140,7 +141,7 @@ class WorkspaceController extends Controller
         $workspaceModel = $this->service->archiveWorkspace(Auth::id(), $workspace);
         $status = $workspaceModel->is_archived ? 'archived' : 'unarchived';
 
-        return ApiResponse::success($workspaceModel, "Workspace {$status} successfully");
+        return ApiResponse::success(new WorkspaceResource($workspaceModel), "Workspace {$status} successfully");
     }
 
     /**

@@ -349,19 +349,15 @@ class WorkspaceService
     /**
      * Search workspaces globally for a user and include their hierarchical path.
      */
-    public function searchWorkspaces(int $userId, string $keyword): array
+    public function searchWorkspaces(int $userId, string $keyword): Collection
     {
         $workspaces = $this->repository->searchByOwner($userId, $keyword);
 
         return $workspaces->map(function ($workspace) {
-            return [
-                'id' => $workspace->id,
-                'name' => $workspace->name,
-                'path' => $this->constructPath($workspace),
-                'is_archived' => $workspace->is_archived,
-                'settings' => $workspace->settings,
-            ];
-        })->toArray();
+            $workspace->path = $this->constructPath($workspace);
+
+            return $workspace;
+        });
     }
 
     /**
