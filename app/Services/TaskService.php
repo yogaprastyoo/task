@@ -8,6 +8,7 @@ use App\Repositories\TaskRepository;
 use App\Repositories\WorkspaceRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class TaskService
@@ -24,9 +25,7 @@ class TaskService
     {
         $workspace = $this->workspaceRepository->findOrFail($workspaceId);
 
-        if ($workspace->owner_id !== $userId) {
-            throw new HttpException(403, 'You do not own this workspace.');
-        }
+        Gate::authorize('viewParent', $workspace);
 
         return $this->taskRepository->findRootTasksByWorkspace($workspaceId);
     }
@@ -39,9 +38,7 @@ class TaskService
         return DB::transaction(function () use ($userId, $workspaceId, $data) {
             $workspace = $this->workspaceRepository->findOrFail($workspaceId);
 
-            if ($workspace->owner_id !== $userId) {
-                throw new HttpException(403, 'You do not own this workspace.');
-            }
+            Gate::authorize('viewParent', $workspace);
 
             $data['workspace_id'] = $workspaceId;
             $data['creator_id'] = $userId;
@@ -58,9 +55,7 @@ class TaskService
     {
         $task = $this->taskRepository->findOrFail($taskId, ['workspace', 'creator', 'parent', 'children']);
 
-        if ($task->creator_id !== $userId) {
-            throw new HttpException(403, 'You do not own this task.');
-        }
+        Gate::authorize('view', $task);
 
         return $task;
     }
@@ -70,12 +65,10 @@ class TaskService
      */
     public function updateTask(int $userId, int $taskId, array $data): Task
     {
-        return DB::transaction(function () use ($userId, $taskId, $data) {
+        return DB::transaction(function () use ($taskId, $data) {
             $task = $this->taskRepository->findOrFail($taskId);
 
-            if ($task->creator_id !== $userId) {
-                throw new HttpException(403, 'You do not own this task.');
-            }
+            Gate::authorize('update', $task);
 
             if (array_key_exists('workspace_id', $data)) {
                 throw new HttpException(422, 'Workspace cannot be changed after task creation.');
@@ -92,12 +85,10 @@ class TaskService
      */
     public function deleteTask(int $userId, int $taskId): void
     {
-        DB::transaction(function () use ($userId, $taskId) {
+        DB::transaction(function () use ($taskId) {
             $task = $this->taskRepository->findOrFail($taskId);
 
-            if ($task->creator_id !== $userId) {
-                throw new HttpException(403, 'You do not own this task.');
-            }
+            Gate::authorize('delete', $task);
 
             $this->taskRepository->delete($task);
         });
@@ -108,12 +99,10 @@ class TaskService
      */
     public function updateTaskStatus(int $userId, int $taskId, string $status): Task
     {
-        return DB::transaction(function () use ($userId, $taskId, $status) {
+        return DB::transaction(function () use ($taskId, $status) {
             $task = $this->taskRepository->findOrFail($taskId);
 
-            if ($task->creator_id !== $userId) {
-                throw new HttpException(403, 'You do not own this task.');
-            }
+            Gate::authorize('updateStatus', $task);
 
             return $this->taskRepository->update($task, ['status' => $status]);
         });
@@ -127,9 +116,7 @@ class TaskService
         return DB::transaction(function () use ($userId, $parentId, $data) {
             $parent = $this->taskRepository->findOrFail($parentId);
 
-            if ($parent->creator_id !== $userId) {
-                throw new HttpException(403, 'You do not own this task.');
-            }
+            Gate::authorize('createSubTask', $parent);
 
             if ($parent->parent_id !== null) {
                 throw new HttpException(422, 'Cannot create a sub-task under another sub-task. Maximum depth is 1 level.');
@@ -149,12 +136,10 @@ class TaskService
      */
     public function moveTask(int $userId, int $taskId, ?int $parentId): Task
     {
-        return DB::transaction(function () use ($userId, $taskId, $parentId) {
+        return DB::transaction(function () use ($taskId, $parentId) {
             $task = $this->taskRepository->findOrFail($taskId);
 
-            if ($task->creator_id !== $userId) {
-                throw new HttpException(403, 'You do not own this task.');
-            }
+            Gate::authorize('move', $task);
 
             if ($parentId !== null) {
                 $parent = $this->taskRepository->findOrFail($parentId);

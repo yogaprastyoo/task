@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\WorkspaceRepository;
 use App\Services\WorkspaceService;
@@ -36,6 +37,10 @@ class WorkspaceServiceTest extends TestCase
             }))
             ->willReturn(new Workspace);
 
+        $user = new User;
+        $user->id = 1;
+        $this->actingAs($user);
+
         $this->service->createWorkspace(1, ['name' => 'Root']);
     }
 
@@ -57,6 +62,10 @@ class WorkspaceServiceTest extends TestCase
             }))
             ->willReturn(new Workspace);
 
+        $user = new User;
+        $user->id = 1;
+        $this->actingAs($user);
+
         $this->service->createWorkspace(1, ['name' => 'Level 2', 'parent_id' => 10]);
     }
 
@@ -73,6 +82,10 @@ class WorkspaceServiceTest extends TestCase
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Maximum workspace depth of 3 reached.');
 
+        $user = new User;
+        $user->id = 1;
+        $this->actingAs($user);
+
         $this->service->createWorkspace(1, ['name' => 'Level 4', 'parent_id' => 20]);
     }
 
@@ -88,6 +101,10 @@ class WorkspaceServiceTest extends TestCase
 
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Parent workspace does not belong to you.');
+
+        $user = new User;
+        $user->id = 1;
+        $this->actingAs($user);
 
         $this->service->createWorkspace(1, ['name' => 'Stolen Parent', 'parent_id' => 30]);
     }
