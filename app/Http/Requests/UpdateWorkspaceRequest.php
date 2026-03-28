@@ -23,7 +23,7 @@ class UpdateWorkspaceRequest extends FormRequest
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'icon' => ['sometimes', 'nullable', 'string', 'max:50'],
             'color' => ['sometimes', 'nullable', 'string', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
-            'is_archived' => ['sometimes', 'boolean'],
+            'is_archived' => ['prohibited'],
 
         ];
     }
