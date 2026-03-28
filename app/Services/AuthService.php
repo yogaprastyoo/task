@@ -22,23 +22,27 @@ class AuthService
      *
      * @throws ValidationException
      */
-    public function login(array $data): void
+    public function login(array $data, Request $request): void
     {
         if (! Auth::attempt($data)) {
             throw ValidationException::withMessages([
                 'email' => [__('auth.failed')],
             ]);
         }
+
+        $request->session()->regenerate();
     }
 
     /**
      * Register a new user and log them in.
      */
-    public function registerUser(array $data): User
+    public function registerUser(array $data, Request $request): User
     {
         $user = $this->userRepository->create($data);
 
         Auth::login($user);
+
+        $request->session()->regenerate();
 
         return $user;
     }
