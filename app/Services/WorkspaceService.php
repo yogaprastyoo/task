@@ -155,16 +155,6 @@ class WorkspaceService
     }
 
     /**
-     * Rename an existing workspace.
-     *
-     * @deprecated Use updateWorkspace instead
-     */
-    public function renameWorkspace(int $userId, int $id, string $name): Workspace
-    {
-        return $this->updateWorkspace($userId, $id, ['name' => $name]);
-    }
-
-    /**
      * Toggle archive status of a workspace.
      */
     public function archiveWorkspace(int $userId, int $id): Workspace
