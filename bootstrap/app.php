@@ -24,8 +24,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'guest.api' => GuestApi::class,
         ]);
+
+        // Prevent Authenticate middleware from evaluating route('login')
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
+            if ($request->is('api/*')) {
+                return true;
+            }
+
+            return $request->expectsJson();
+        });
+
         $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->is('api/*')) {
                 return ApiResponse::error(
@@ -33,6 +44,12 @@ return Application::configure(basePath: dirname(__DIR__))
                     422,
                     $e->errors()
                 );
+            }
+        });
+
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return ApiResponse::error($e->getMessage(), 401);
             }
         });
 
@@ -44,10 +61,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
                 if ($e instanceof TypeError && str_contains($e->getMessage(), 'must be of type int, string given')) {
                     return ApiResponse::error('Resource not found.', 404);
-                }
-
-                if ($e instanceof AuthenticationException) {
-                    return ApiResponse::error($e->getMessage(), 401);
                 }
 
                 $statusCode = $e instanceof HttpExceptionInterface
