@@ -24,7 +24,7 @@ class AuthController extends Controller
      */
     public function register(StoreRegisterRequest $request): JsonResponse
     {
-        $user = $this->authService->registerUser($request->validated());
+        $user = $this->authService->registerUser($request->validated(), $request);
 
         return ApiResponse::success($user, 'Registration successful', 201);
     }
@@ -34,9 +34,7 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $this->authService->login($request->validated());
-
-        $request->session()->regenerate();
+        $this->authService->login($request->validated(), $request);
 
         return ApiResponse::success(null, 'Login successful');
     }

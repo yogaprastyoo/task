@@ -6,12 +6,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 it('can register a new user', function () {
-    $response = $this->postJson('/api/auth/register', [
-        'name' => 'John Doe',
-        'email' => 'john@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
-    ]);
+    $response = $this->withHeader('Referer', 'http://localhost')
+        ->postJson('/api/auth/register', [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
 
     $response->assertCreated()
         ->assertJson([
@@ -38,11 +39,12 @@ it('can register a new user', function () {
 });
 
 it('fails registration with missing name', function () {
-    $response = $this->postJson('/api/auth/register', [
-        'email' => 'john@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
-    ]);
+    $response = $this->withHeader('Referer', 'http://localhost')
+        ->postJson('/api/auth/register', [
+            'email' => 'john@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
 
     $response->assertStatus(422)
         ->assertJson([
@@ -54,12 +56,13 @@ it('fails registration with missing name', function () {
 it('fails registration with duplicate email', function () {
     User::factory()->create(['email' => 'john@example.com']);
 
-    $response = $this->postJson('/api/auth/register', [
-        'name' => 'John Doe',
-        'email' => 'john@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
-    ]);
+    $response = $this->withHeader('Referer', 'http://localhost')
+        ->postJson('/api/auth/register', [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
 
     $response->assertStatus(422)
         ->assertJson([
@@ -71,12 +74,13 @@ it('fails registration with duplicate email', function () {
 it('fails registration with case-insensitive duplicate email', function () {
     User::factory()->create(['email' => 'john@example.com']);
 
-    $response = $this->postJson('/api/auth/register', [
-        'name' => 'John Doe',
-        'email' => 'JOHN@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
-    ]);
+    $response = $this->withHeader('Referer', 'http://localhost')
+        ->postJson('/api/auth/register', [
+            'name' => 'John Doe',
+            'email' => 'JOHN@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
 
     $response->assertStatus(422)
         ->assertJson([
@@ -86,12 +90,13 @@ it('fails registration with case-insensitive duplicate email', function () {
 });
 
 it('fails registration with password mismatch', function () {
-    $response = $this->postJson('/api/auth/register', [
-        'name' => 'John Doe',
-        'email' => 'john@example.com',
-        'password' => 'password123',
-        'password_confirmation' => 'wrongpassword',
-    ]);
+    $response = $this->withHeader('Referer', 'http://localhost')
+        ->postJson('/api/auth/register', [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'wrongpassword',
+        ]);
 
     $response->assertStatus(422)
         ->assertJson([
@@ -101,12 +106,13 @@ it('fails registration with password mismatch', function () {
 });
 
 it('does not return password in response', function () {
-    $response = $this->postJson('/api/auth/register', [
-        'name' => 'John Doe',
-        'email' => 'john@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-    ]);
+    $response = $this->withHeader('Referer', 'http://localhost')
+        ->postJson('/api/auth/register', [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
 
     $response->assertStatus(201);
     $this->assertArrayNotHasKey('password', $response->json('data'));
@@ -116,6 +122,7 @@ it('restricts authenticated user from accessing register route', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)
+        ->withHeader('Referer', 'http://localhost')
         ->postJson('/api/auth/register', [
             'name' => 'Jane Doe',
             'email' => 'jane@example.com',
