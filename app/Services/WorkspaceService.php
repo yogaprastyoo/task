@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Workspace;
 use App\Repositories\WorkspaceRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -74,47 +75,48 @@ class WorkspaceService
      */
     public function createWorkspace(int $userId, array $data): Workspace
     {
-        $parentId = $data['parent_id'] ?? null;
-        $depth = 1;
+        return DB::transaction(function () use ($userId, $data) {
+            $parentId = $data['parent_id'] ?? null;
+            $depth = 1;
 
-        if ($parentId) {
-            $parent = $this->repository->findOrFail($parentId);
+            if ($parentId) {
+                $parent = $this->repository->findOrFail($parentId);
 
-            Gate::authorize('viewParent', $parent);
+                Gate::authorize('viewParent', $parent);
 
-            $depth = $parent->depth + 1;
-        }
+                $depth = $parent->depth + 1;
+            }
 
-        if ($depth > 3) {
-            throw ValidationException::withMessages([
-                'parent_id' => ['Maximum workspace depth of 3 reached.'],
+            if ($depth > 3) {
+                throw ValidationException::withMessages([
+                    'parent_id' => ['Maximum workspace depth of 3 reached.'],
+                ]);
+            }
+
+            if ($this->repository->findByNameAndParent($userId, $parentId, $data['name'])) {
+                $levelMessage = $parentId ? 'at this parent level' : 'at the root level';
+                throw ValidationException::withMessages([
+                    'name' => ["A workspace with this name already exists {$levelMessage}."],
+                ]);
+            }
+
+            $settings = Workspace::DEFAULT_SETTINGS;
+            if (isset($data['icon'])) {
+                $settings['icon'] = $data['icon'];
+            }
+            if (isset($data['color'])) {
+                $settings['color'] = $data['color'];
+            }
+
+            return $this->repository->create([
+                'name' => $data['name'],
+                'owner_id' => $userId,
+                'parent_id' => $parentId,
+                'depth' => $depth,
+                'settings' => $settings,
+                'is_archived' => $data['is_archived'] ?? false,
             ]);
-        }
-
-        if ($this->repository->findByNameAndParent($userId, $parentId, $data['name'])) {
-            $levelMessage = $parentId ? 'at this parent level' : 'at the root level';
-            throw ValidationException::withMessages([
-                'name' => ["A workspace with this name already exists {$levelMessage}."],
-            ]);
-        }
-
-        $settings = Workspace::DEFAULT_SETTINGS;
-        if (isset($data['icon'])) {
-            $settings['icon'] = $data['icon'];
-        }
-        if (isset($data['color'])) {
-            $settings['color'] = $data['color'];
-        }
-
-        return $this->repository->create([
-
-            'name' => $data['name'],
-            'owner_id' => $userId,
-            'parent_id' => $parentId,
-            'depth' => $depth,
-            'settings' => $settings,
-            'is_archived' => $data['is_archived'] ?? false,
-        ]);
+        });
     }
 
     /**
@@ -159,16 +161,18 @@ class WorkspaceService
      */
     public function archiveWorkspace(int $userId, int $id): Workspace
     {
-        $workspace = $this->repository->findOrFail($id);
+        return DB::transaction(function () use ($id) {
+            $workspace = $this->repository->findOrFail($id);
 
-        Gate::authorize('archive', $workspace);
+            Gate::authorize('archive', $workspace);
 
-        $newStatus = ! $workspace->is_archived;
-        $this->performRecursiveArchive($workspace, $newStatus);
+            $newStatus = ! $workspace->is_archived;
+            $this->performRecursiveArchive($workspace, $newStatus);
 
-        return $this->repository->update($workspace, [
-            'is_archived' => $newStatus,
-        ]);
+            return $this->repository->update($workspace, [
+                'is_archived' => $newStatus,
+            ]);
+        });
     }
 
     /**
@@ -208,11 +212,13 @@ class WorkspaceService
      */
     public function deleteWorkspace(int $userId, int $id): void
     {
-        $workspace = $this->repository->findOrFail($id);
+        DB::transaction(function () use ($id) {
+            $workspace = $this->repository->findOrFail($id);
 
-        Gate::authorize('delete', $workspace);
+            Gate::authorize('delete', $workspace);
 
-        $this->performRecursiveDelete($workspace);
+            $this->performRecursiveDelete($workspace);
+        });
     }
 
     /**
@@ -235,55 +241,57 @@ class WorkspaceService
      */
     public function moveWorkspace(int $userId, int $id, ?int $parentId): Workspace
     {
-        $workspace = $this->repository->findOrFail($id);
+        return DB::transaction(function () use ($userId, $id, $parentId) {
+            $workspace = $this->repository->findOrFail($id);
 
-        Gate::authorize('move', $workspace);
+            Gate::authorize('move', $workspace);
 
-        $newDepth = 1;
+            $newDepth = 1;
 
-        if ($parentId) {
-            if ($parentId === $id) {
+            if ($parentId) {
+                if ($parentId === $id) {
+                    throw ValidationException::withMessages([
+                        'parent_id' => ['Cannot move a workspace to itself.'],
+                    ]);
+                }
+
+                $parent = $this->repository->findOrFail($parentId);
+
+                Gate::authorize('viewParent', $parent);
+
+                if ($this->repository->isDescendant($id, $parent)) {
+                    throw ValidationException::withMessages([
+                        'parent_id' => ['Circular dependency detected: Cannot move a workspace to its own descendant.'],
+                    ]);
+                }
+
+                $newDepth = $parent->depth + 1;
+            }
+
+            // Check if sibling name conflict exists at the destination parent level
+            // Only check if we are actually changing the parent
+            if ($parentId !== $workspace->parent_id) {
+                if ($this->repository->findByNameAndParent($userId, $parentId, $workspace->name)) {
+                    $levelMessage = $parentId ? 'at this parent level' : 'at the root level';
+                    throw ValidationException::withMessages([
+                        'name' => ["A workspace with this name already exists {$levelMessage}."],
+                    ]);
+                }
+            }
+
+            $subtreeHeight = $this->repository->getSubtreeHeight($workspace);
+
+            if (($newDepth + $subtreeHeight - 1) > 3) {
                 throw ValidationException::withMessages([
-                    'parent_id' => ['Cannot move a workspace to itself.'],
+                    'parent_id' => ['Moving this workspace would exceed the maximum depth of 3.'],
                 ]);
             }
 
-            $parent = $this->repository->findOrFail($parentId);
+            $workspace = $this->repository->update($workspace, ['parent_id' => $parentId]);
+            $this->repository->updateSubtreeDepths($workspace, $newDepth);
 
-            Gate::authorize('viewParent', $parent);
-
-            if ($this->repository->isDescendant($id, $parent)) {
-                throw ValidationException::withMessages([
-                    'parent_id' => ['Circular dependency detected: Cannot move a workspace to its own descendant.'],
-                ]);
-            }
-
-            $newDepth = $parent->depth + 1;
-        }
-
-        // Check if sibling name conflict exists at the destination parent level
-        // Only check if we are actually changing the parent
-        if ($parentId !== $workspace->parent_id) {
-            if ($this->repository->findByNameAndParent($userId, $parentId, $workspace->name)) {
-                $levelMessage = $parentId ? 'at this parent level' : 'at the root level';
-                throw ValidationException::withMessages([
-                    'name' => ["A workspace with this name already exists {$levelMessage}."],
-                ]);
-            }
-        }
-
-        $subtreeHeight = $this->repository->getSubtreeHeight($workspace);
-
-        if (($newDepth + $subtreeHeight - 1) > 3) {
-            throw ValidationException::withMessages([
-                'parent_id' => ['Moving this workspace would exceed the maximum depth of 3.'],
-            ]);
-        }
-
-        $workspace = $this->repository->update($workspace, ['parent_id' => $parentId]);
-        $this->repository->updateSubtreeDepths($workspace, $newDepth);
-
-        return $workspace;
+            return $workspace;
+        });
     }
 
     /**
@@ -299,24 +307,26 @@ class WorkspaceService
      */
     public function restoreWorkspace(int $userId, int $id): Workspace
     {
-        $workspace = $this->repository->findWithTrashed($id);
+        return DB::transaction(function () use ($userId, $id) {
+            $workspace = $this->repository->findWithTrashed($id);
 
-        if (! $workspace->trashed()) {
-            throw new NotFoundHttpException('Workspace not found in trash.');
-        }
+            if (! $workspace->trashed()) {
+                throw new NotFoundHttpException('Workspace not found in trash.');
+            }
 
-        Gate::authorize('restore', $workspace);
+            Gate::authorize('restore', $workspace);
 
-        if ($this->repository->findByNameAndParent($userId, $workspace->parent_id, $workspace->name)) {
-            $levelMessage = $workspace->parent_id ? 'at this parent level' : 'at the root level';
-            throw ValidationException::withMessages([
-                'name' => ["Cannot restore workspace because an active workspace with this name already exists {$levelMessage}."],
-            ]);
-        }
+            if ($this->repository->findByNameAndParent($userId, $workspace->parent_id, $workspace->name)) {
+                $levelMessage = $workspace->parent_id ? 'at this parent level' : 'at the root level';
+                throw ValidationException::withMessages([
+                    'name' => ["Cannot restore workspace because an active workspace with this name already exists {$levelMessage}."],
+                ]);
+            }
 
-        $this->performRecursiveRestore($workspace);
+            $this->performRecursiveRestore($workspace);
 
-        return $workspace->refresh();
+            return $workspace->refresh();
+        });
     }
 
     /**
